@@ -1,0 +1,84 @@
+services:
+  # HDFS NameNode (master)
+  namenode:
+    image: matnar/hadoop
+    hostname: master
+    container_name: hdfs-namenode
+    tty: true # interactive
+    stdin_open: true # stdin open
+    ports:
+      - 9870:9870 # web-ui
+    volumes:
+      - ./data/dataset.csv:/data/dataset.csv
+    # it waits for the DataNodes to start
+    depends_on:
+      - datanode-1
+      - datanode-2
+      - datanode-3
+  # HDFS DataNode
+  datanode-1:
+    image: matnar/hadoop
+    container_name: hdfs-datanode-1
+    hostname: slave1
+    tty: true
+    stdin_open: true
+  # HDFS DataNode
+  datanode-2:
+    image: matnar/hadoop
+    container_name: hdfs-datanode-2
+    hostname: slave2
+    tty: true
+    stdin_open: true
+  # HDFS DataNode
+  datanode-3:
+    image: matnar/hadoop
+    container_name: hdfs-datanode-3
+    hostname: slave3
+    tty: true
+    stdin_open: true
+  # Spark Master node
+  spark-master:
+    image: spark:python3
+    container_name: spark-master
+    hostname: spark-master
+    command: /bin/bash
+    tty: true
+    stdin_open: true
+    ports:
+      - 8080:8080 # web-ui
+    depends_on:
+      - namenode
+    environment:
+      SPARK_LOCAL_IP: spark-master
+    volumes:
+      - ./src:/data/sabd
+  # Spark Worker node
+  spark-worker-1:
+    image: spark:python3
+    container_name: spark-worker-1
+    hostname: spark-worker-1
+    command: /bin/bash
+    tty: true
+    stdin_open: true
+    depends_on:
+      - spark-master
+  # Spark Worker node
+  spark-worker-2:
+    image: spark:python3
+    container_name: spark-worker-2
+    hostname: spark-worker-2
+    command: /bin/bash
+    tty: true
+    stdin_open: true
+    depends_on:
+      - spark-master
+  # Spark Worker node
+  spark-worker-3:
+    image: spark:python3
+    container_name: spark-worker-3
+    hostname: spark-worker-3
+    command: /bin/bash
+    tty: true
+    stdin_open: true
+    depends_on:
+      - spark-master

@@ -10,6 +10,7 @@ services:
       - 9870:9870 # web-ui
     volumes:
       - ./data/dataset.csv:/data/dataset.csv
+      - ./Results:/results
     # it waits for the DataNodes to start
     depends_on:
       - datanode-1

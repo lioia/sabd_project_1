@@ -16,6 +16,9 @@ docker exec hdfs-namenode sh -c "/usr/local/hadoop/sbin/start-dfs.sh"
 echo "HDFS: copy dataset"
 docker exec hdfs-namenode sh -c "hdfs dfs -put /data/dataset.csv /dataset.csv"
 
+echo "HDFS: create results folder"
+docker exec hdfs-namenode sh -c "hdfs dfs -mkdir /results"
+
 echo "Spark: launching master"
 docker exec spark-master sh -c "/opt/spark/sbin/start-master.sh"
 

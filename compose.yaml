@@ -4,13 +4,13 @@ services:
     image: matnar/hadoop
     hostname: master
     container_name: hdfs-namenode
-    tty: true # interactive
-    stdin_open: true # stdin open
+    tty: true         # interactive
+    stdin_open: true  # stdin open
     ports:
       - 9870:9870 # web-ui
     volumes:
-      - ./data/dataset.csv:/data/dataset.csv
-      - ./Results:/results
+      - ./data:/app/data        # folder containing the dataset
+      - ./Results:/app/results  # folder for the results
     # it waits for the DataNodes to start
     depends_on:
       - datanode-1
@@ -47,12 +47,13 @@ services:
     stdin_open: true
     ports:
       - 8080:8080 # web-ui
+      - 4040:4040 # web-ui
     depends_on:
       - namenode
     environment:
       SPARK_LOCAL_IP: spark-master
     volumes:
-      - ./src:/data/sabd
+      - ./src:/app/
   # Spark Worker node
   spark-worker-1:
     image: spark:python3

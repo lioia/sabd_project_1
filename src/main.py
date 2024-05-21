@@ -3,7 +3,7 @@ from pyspark.sql.functions import to_date
 
 from rdd import query_1_rdd, query_2_rdd
 from df import query_1_df, query_2_df
-from utils import write_to_hdfs
+from utils import check_results, write_to_hdfs
 
 
 def main():
@@ -33,14 +33,27 @@ def main():
 
     # DataFrame API
     df = (
+        # select only the necessary columns
         df.select(["date", "serial_number", "model", "failure", "vault_id"])
+        # create new column date_no_time to map date column (remove time)
         .withColumn("date_no_time", to_date(df["date"]))
+        # drop date column
         .drop("date")
+        # rename date_no_time to date
         .withColumnRenamed("date_no_time", "date")
+        .cache()
     )
-    # q1_df = query_1_df(df)
-    # q2_1_df, q2_2_df = query_2_df(df)
-    # TODO: check result between rdd and df
+    q1_df = query_1_df(df)
+    q2_1_df, q2_2_df = query_2_df(df)
+
+    # Result check
+    check_1 = check_results(q1_rdd_df, q1_df)  # query 1
+    check_2_1 = check_results(q2_1_rdd_df, q2_1_df)  # query 2 ranking 1
+    check_2_2 = check_results(q2_2_rdd_df, q2_2_df)  # query 2 ranking 2
+    if not check_1 or not check_2_1 or not check_2_2:
+        print(f"Result check failed; Q1 {check_1}, Q2R1 {check_2_1}, Q2R2 {check_2_2}")
+
+    # Stop Spark
     spark.stop()
 
 

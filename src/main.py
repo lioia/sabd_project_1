@@ -3,14 +3,12 @@ from pyspark.sql.functions import to_date
 
 from rdd import query_1_rdd, query_2_rdd
 from df import query_1_df, query_2_df
-from utils import check_results, write_to_hdfs
+from utils import check_results_1, check_results_2_1, check_results_2_2, write_to_hdfs
 
 
 def main():
     spark = SparkSession.Builder().appName("SABDProject1").getOrCreate()
-    df = spark.read.csv(
-        "hdfs://master:54310/data/dataset.csv", header=True, inferSchema=True
-    )
+    df = spark.read.csv("hdfs://master:54310/data/dataset.csv", header=True)
     # TODO: calculate execution time for both queries
 
     # RDD API
@@ -47,11 +45,9 @@ def main():
     q2_1_df, q2_2_df = query_2_df(df)
 
     # Result check
-    check_1 = check_results(q1_rdd_df, q1_df)  # query 1
-    check_2_1 = check_results(q2_1_rdd_df, q2_1_df)  # query 2 ranking 1
-    check_2_2 = check_results(q2_2_rdd_df, q2_2_df)  # query 2 ranking 2
-    if not check_1 or not check_2_1 or not check_2_2:
-        print(f"Result check failed; Q1 {check_1}, Q2R1 {check_2_1}, Q2R2 {check_2_2}")
+    check_results_1(q1_rdd_df, q1_df)  # query 1
+    check_results_2_1(q2_1_rdd_df, q2_1_df)  # query 2 ranking 1
+    check_results_2_2(q2_2_rdd_df, q2_2_df)  # query 2 ranking 2
 
     # Stop Spark
     spark.stop()

@@ -39,7 +39,7 @@ def query_2_rdd(
         # summing all the failures for the specific model
         .reduceByKey(add)
         # sorting by the failure count
-        .sortBy(lambda x: -x[1])  # type: ignore[type-var]
+        .sortBy(lambda x: (-x[1], x[0]))  # type: ignore[type-var]
     )
     df_ranking_1 = ranking_1.toDF(["model", "failures_count"]).coalesce(1).limit(10)
 
@@ -63,7 +63,7 @@ def query_2_rdd(
     ranking_2 = (
         vault_failures.join(vault_models)
         .map(lambda x: (x[0], int(x[1][0]), ",".join(x[1][1])))
-        .sortBy(lambda x: -x[1])  # type: ignore[type-var]
+        .sortBy(lambda x: (-x[1], x[0]))  # type: ignore[type-var]
     )
     df_ranking_2 = (
         ranking_2.toDF(["vault_id", "failures_count", "list_of_models"])

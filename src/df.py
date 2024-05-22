@@ -4,15 +4,17 @@ from pyspark.sql.functions import collect_set, concat_ws, desc, sum
 
 
 def query_1_df(df: DataFrame) -> DataFrame:
-    return (
+    df = (
         # group by key (date, vault_id)
-        df.groupBy(["date_no_time", "vault_id"])
+        df.groupBy(["date", "vault_id"])
         # reduce failures
         .agg(sum("failure"))
         # rename sum(failure) to count
         .withColumnRenamed("sum(failure)", "count")
+    )
+    return (
         # filter based on number of failures
-        .filter((df["count"] == 4) | (df["count"] == 3) | (df["count"] == 2))
+        df.filter((df["count"] == 4) | (df["count"] == 3) | (df["count"] == 2))
         # sort with descending failures and ascending key
         .orderBy(
             ["count", "date", "vault_id"],
@@ -34,7 +36,7 @@ def query_2_df(df: DataFrame) -> Tuple[DataFrame, DataFrame]:
         # rename to failures_count
         .withColumnRenamed("sum(failure)", "failures_count")
         # order with decreasing failures_count
-        .orderBy(desc("failures_count"))
+        .orderBy(["failures_count", "model"], ascending=[False, True])
         # retarget to single partition
         .coalesce(1)
         # limit to 10 (ranking)
@@ -67,21 +69,20 @@ def query_2_df(df: DataFrame) -> Tuple[DataFrame, DataFrame]:
         # reduce model to set
         .agg(collect_set("model"))
     )
-    vault_models = (
-        vault_models
-        # create new column list_of_models concatenating the set of models
-        .withColumn(
-            "list_of_models",
-            concat_ws(",", vault_models["collect_set(model)"]),
-        )
-        # remove collect_set(model) column
-        .drop("collect_set(model)")
-    )
     df_ranking_2 = (
         # join the two dataframes (based only on the vault_id in the first df)
         vault_failures.join(vault_models, ["vault_id"], how="left")
         # order by decreasing failures_count and increasing vault_id
         .orderBy(["failures_count", "vault_id"], ascending=[False, True])
+    )
+
+    df_ranking_2 = (
+        # concatenate set to a string into list_of_models column
+        df_ranking_2.withColumn(
+            "list_of_models", concat_ws(",", df_ranking_2["collect_set(model)"])
+        )
+        # drop redundant collect_set(model) column
+        .drop("collect_set(model)")
     )
 
     return df_ranking_1, df_ranking_2

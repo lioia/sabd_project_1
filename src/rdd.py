@@ -57,6 +57,7 @@ def query_2_rdd(
         .map(lambda x: (x[4], x[2]))
         # grouping into (vault_id, list_of_models)
         .groupByKey()
+        .mapValues(set)
     )
 
     ranking_2 = (

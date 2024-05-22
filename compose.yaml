@@ -55,30 +55,10 @@ services:
     volumes:
       - ./src:/app/
   # Spark Worker node
-  spark-worker-1:
+  spark-worker:
     image: spark:python3
-    container_name: spark-worker-1
-    hostname: spark-worker-1
-    command: /bin/bash
-    tty: true
-    stdin_open: true
-    depends_on:
-      - spark-master
-  # Spark Worker node
-  spark-worker-2:
-    image: spark:python3
-    container_name: spark-worker-2
-    hostname: spark-worker-2
-    command: /bin/bash
-    tty: true
-    stdin_open: true
-    depends_on:
-      - spark-master
-  # Spark Worker node
-  spark-worker-3:
-    image: spark:python3
-    container_name: spark-worker-3
-    hostname: spark-worker-3
+    container_name: spark-worker
+    hostname: spark-worker
     command: /bin/bash
     tty: true
     stdin_open: true

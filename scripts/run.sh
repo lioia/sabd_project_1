@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# $1 number of executors
+
+workers=${1:-3}
+
 echo "Cleaning results"
 rm ./Results/*.csv
 
@@ -32,21 +36,16 @@ echo "Spark: launching master"
 docker exec spark-master sh -c \
   "/opt/spark/sbin/start-master.sh"
 
-echo "Spark: launching worker 1"
-docker exec spark-worker-1 sh -c \
-  "/opt/spark/sbin/start-worker.sh spark://spark-master:7077"
-
-echo "Spark: launching worker 2"
-docker exec spark-worker-2 sh -c \
-  "/opt/spark/sbin/start-worker.sh spark://spark-master:7077"
-
-echo "Spark: launching worker 3"
-docker exec spark-worker-3 sh -c \
+echo "Spark: launching worker"
+docker exec spark-worker sh -c \
   "/opt/spark/sbin/start-worker.sh spark://spark-master:7077"
 
 echo "Launching Application"
 docker exec spark-master sh -c \
-  "/opt/spark/bin/spark-submit --master spark://spark-master:7077 /app/main.py"
+  "/opt/spark/bin/spark-submit \
+    --master spark://spark-master:7077 \
+    --conf spark.executor.instances=$workers \
+    /app/main.py"
 
 echo "HDFS: copy results into local fs"
 docker exec hdfs-namenode sh -c \

@@ -54,7 +54,6 @@ services:
       SPARK_LOCAL_IP: spark-master
     volumes:
       - ./src:/app/
-      - ./requirements.txt:/app/requirements.txt
       - ./config/nifi:/app/nifi
   # Spark Worker node
   spark-worker:

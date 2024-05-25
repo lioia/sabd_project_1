@@ -1,56 +1,47 @@
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import to_date
+import argparse
 
-from rdd import query_1_rdd, query_2_rdd
-from df import query_1_df, query_2_df
-from utils import check_results_1, check_results_2_1, check_results_2_2, write_to_hdfs
+from spark.spark import run_spark_analysis, run_spark_check, run_spark_save
+
+# TODO: mongo
 
 
 def main():
-    spark = SparkSession.Builder().appName("SABDProject1").getOrCreate()
-    df = spark.read.csv("hdfs://master:54310/data/dataset.csv", header=True)
-    # TODO: calculate execution time for both queries
-
-    # RDD API
-    rdd = (
-        # filter all the headers (every ~60k events there is a header)
-        df.rdd.filter(lambda x: x[4].isdecimal())
-        # mapping into (date, serial_number, model, failure, vault_id)
-        # date is truncated into the format YYYY-MM-DD
-        .map(lambda x: (x[0][:10], x[1], x[2], int(x[3]), x[4]))
-        # caching as it is required by the two queries
-        .cache()
+    parser = argparse.ArgumentParser(description="SABD Project 1")
+    subparsers = parser.add_subparsers(title="sub-commands", dest="command")
+    save_parser = subparsers.add_parser(
+        "save",
+        help="Execute pipeline for saving to HDFS (running all query using RDD API)",
     )
-    q1_rdd_df = query_1_rdd(rdd)
-    q2_1_rdd_df, q2_2_rdd_df = query_2_rdd(rdd)
-
-    # Write results to HDFS
-    write_to_hdfs(q1_rdd_df, "/results/query_1/")
-    write_to_hdfs(q2_1_rdd_df, "/results/query_2_1")
-    write_to_hdfs(q2_2_rdd_df, "/results/query_2_2")
-
-    # DataFrame API
-    df = (
-        # select only the necessary columns
-        df.select(["date", "serial_number", "model", "failure", "vault_id"])
-        # create new column date_no_time to map date column (remove time)
-        .withColumn("date_no_time", to_date(df["date"]))
-        # drop date column
-        .drop("date")
-        # rename date_no_time to date
-        .withColumnRenamed("date_no_time", "date")
-        .cache()
+    save_parser.add_argument(
+        "--nifi",
+        type=bool,
+        default=False,
+        help="Run NiFi flow",
     )
-    q1_df = query_1_df(df)
-    q2_1_df, q2_2_df = query_2_df(df)
-
-    # Result check
-    check_results_1(q1_rdd_df, q1_df)  # query 1
-    check_results_2_1(q2_1_rdd_df, q2_1_df)  # query 2 ranking 1
-    check_results_2_2(q2_2_rdd_df, q2_2_df)  # query 2 ranking 2
-
-    # Stop Spark
-    spark.stop()
+    save_parser.add_argument(
+        "--format",
+        type=str,
+        choices=["csv", "parquet", "avro"],
+        default="csv",
+        help="Choose format (parquet and avro will run NiFi Flow)",
+    )
+    subparsers.add_parser(
+        "analysis",
+        help="Execute pipeline for analysis",
+    )
+    subparsers.add_parser(
+        "check",
+        help="Execute pipeline to check different API implementations",
+    )
+    args = parser.parse_args()
+    if args.command == "save":
+        nifi: bool = args.nifi
+        format: str = args.format
+        run_spark_save(nifi, format)
+    elif args.command == "analysis":
+        run_spark_analysis()
+    elif args.command == "check":
+        run_spark_check()
 
 
 if __name__ == "__main__":

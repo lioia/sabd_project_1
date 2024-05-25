@@ -1,7 +1,7 @@
 from typing import Tuple
-from pyspark import RDD
 from operator import add
 
+from pyspark import RDD
 from pyspark.sql import DataFrame
 
 
@@ -11,6 +11,18 @@ from pyspark.sql import DataFrame
 # - [2]: model
 # - [3]: failure
 # - [4]: vault_id
+
+
+def rdd_preprocess(df: DataFrame) -> RDD[Tuple[str, str, str, int, str]]:
+    return (
+        # filter all the headers (every ~60k events there is a header)
+        df.rdd.filter(lambda x: x[4].isdecimal())
+        # mapping into (date, serial_number, model, failure, vault_id)
+        # date is truncated into the format YYYY-MM-DD
+        .map(lambda x: (x[0][:10], x[1], x[2], int(x[3]), x[4]))
+        # caching as it is required by the two queries
+        .cache()
+    )
 
 
 def query_1_rdd(rdd: RDD[Tuple[str, str, str, int, str]]):

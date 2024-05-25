@@ -1,35 +1,50 @@
 #!/bin/bash
 
-# $1 number of executors
+# $1 command
 
-workers=${1:-3}
+cmd=${1:-save}
+
+if [[ "$cmd" != "save" && "$cmd" != "analysis" && "$cmd" != "check" ]]; then
+  echo "Error: command '$cmd' is not valid"
+  exit 1
+fi
 
 echo "Cleaning results"
 rm ./Results/*.csv
 
 echo "Starting Docker Compose"
-docker compose up -d
+docker compose --env-file ./config/.env up -d
 
 echo "HDFS: mesg ttyname failed fix"
-docker exec hdfs-namenode sh -c \
+docker exec namenode sh -c \
   "echo '#!/bin/sh' > /usr/bin/mesg && chmod 755 /usr/bin/mesg"
 
 echo "HDFS: formatting"
-docker exec hdfs-namenode sh -c \
+docker exec namenode sh -c \
   "hdfs namenode -format"
 
 echo "HDFS: starting"
-docker exec hdfs-namenode sh -c \
+docker exec namenode sh -c \
   "/usr/local/hadoop/sbin/start-dfs.sh"
 
 echo "HDFS: creating folders"
-docker exec hdfs-namenode sh -c \
+docker exec namenode sh -c \
   "hdfs dfs -mkdir /data"
-docker exec hdfs-namenode sh -c \
-  "hdfs dfs -mkdir /results && hdfs dfs -chown spark /results"
+docker exec namenode sh -c \
+  "hdfs dfs -mkdir /filtered"
+docker exec namenode sh -c \
+  "hdfs dfs -mkdir /results"
+
+echo "HDFS: chown folders"
+docker exec namenode sh -c \
+  "hdfs dfs -chown nifi /data"
+docker exec namenode sh -c \
+  "hdfs dfs -chown nifi /filtered"
+docker exec namenode sh -c \
+  "hdfs dfs -chown spark /results"
 
 echo "HDFS: copy dataset"
-docker exec hdfs-namenode sh -c \
+docker exec namenode sh -c \
   "hdfs dfs -put /app/data/dataset.csv /data/dataset.csv"
 
 echo "Spark: launching master"
@@ -44,11 +59,10 @@ echo "Launching Application"
 docker exec spark-master sh -c \
   "/opt/spark/bin/spark-submit \
     --master spark://spark-master:7077 \
-    --conf spark.executor.instances=$workers \
-    /app/main.py"
+    /app/main.py $cmd"
 
 echo "HDFS: copy results into local fs"
-docker exec hdfs-namenode sh -c \
+docker exec namenode sh -c \
   "hdfs dfs -get /results/query_1/*.csv /app/results/query_1.csv"
-docker exec hdfs-namenode sh -c \
+docker exec namenode sh -c \
   "hdfs dfs -getmerge /results/query_2_1/*.csv /results/query_2_2/*.csv /app/results/query_2.csv"

@@ -1,6 +1,21 @@
 from typing import Tuple
+
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import collect_set, concat_ws, desc, sum
+from pyspark.sql.functions import collect_set, concat_ws, desc, sum, to_date
+
+
+def df_preprocess(df: DataFrame) -> DataFrame:
+    return (
+        # select only the necessary columns
+        df.select(["date", "serial_number", "model", "failure", "vault_id"])
+        # create new column date_no_time to map date column (remove time)
+        .withColumn("date_no_time", to_date(df["date"]))
+        # drop date column
+        .drop("date")
+        # rename date_no_time to date
+        .withColumnRenamed("date_no_time", "date")
+        .cache()
+    )
 
 
 def query_1_df(df: DataFrame) -> DataFrame:

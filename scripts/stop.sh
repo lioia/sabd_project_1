@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Stopping Docker Compose"
-docker compose stop
+docker compose --env-file ./config/.env stop
 
 echo "Removing Containers"
-docker compose rm -f
+docker compose --env-file ./config/.env rm -f

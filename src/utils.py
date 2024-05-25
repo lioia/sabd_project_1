@@ -1,5 +1,6 @@
-from pyspark.sql import DataFrame
 from datetime import datetime
+
+from pyspark.sql import DataFrame
 
 
 def write_to_hdfs(df: DataFrame, file: str):

@@ -7,8 +7,20 @@ Download dataset into `data/dataset.csv`
 Execute script:
 
 ```bash
-./scripts/run.sh
+./scripts/run.sh [command=save]
 ```
+
+Where `command` can be:
+
+- `save`: executes the entire pipeline using RDD API and saves to HDFS;
+  additional arguments:
+  - `--nifi`: preprocessing is done by the NiFi flow
+  - `--format {avro,parquet,csv}`: file format to use (`avro` and `parquet` will
+    automatically run NiFi flow)
+- `analysis`: executes the pipeline using NiFi comparing the two APIs (RDD and
+  DataFrame) for all the different file formats (`avro`, `parquet`, `csv`)
+- `check`: executes the RDD and DataFrame API checking whether the results are
+  the same
 
 ## Development Environment Setup
 

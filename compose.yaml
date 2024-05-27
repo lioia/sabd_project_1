@@ -51,8 +51,7 @@ services:
     environment:
       SPARK_LOCAL_IP: spark-master
     volumes:
-      - ./src:/app/
-      - ./config/nifi:/app/nifi
+      - ./src/:/app/
   # Spark Worker nodes
   spark-worker-1:
     image: spark:python3
@@ -86,3 +85,8 @@ services:
       - ./nifi/hdfs:/data
     depends_on:
       - namenode
+    healthcheck:
+      test: curl -k --fail https://localhost:8443 || exit 1
+      interval: 30s
+      timeout: 15s
+      retries: 3

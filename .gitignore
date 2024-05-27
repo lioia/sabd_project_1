@@ -2,3 +2,4 @@ data
 .venv
 *.crc
 .env
+__pycache__

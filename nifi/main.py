@@ -4,7 +4,7 @@ import os
 import urllib3
 from dotenv import load_dotenv
 
-from nifi.nifi_api import (
+from nifi_api import (
     check_run_status,
     enable_controller_service,
     get_all_controller_services,
@@ -17,25 +17,30 @@ from nifi.nifi_api import (
 
 
 def main():
-    load_dotenv()
-    urllib3.disable_warnings()
-
-    username = os.environ.get("USERNAME")
-    password = os.environ.get("PASSWORD")
-    if username is None or password is None:
+    username = os.environ.get("NIFI_USERNAME")
+    password = os.environ.get("NIFI_PASSWORD")
+    template_path = os.environ.get("NIFI_TEMPLATE_PATH")
+    if username is None or password is None or template_path is None:
         raise KeyError("Environment variables for NiFi not set")
 
+    print("NiFi: logging in")
     access_token = login(username, password)
     root_id = get_root_pg(access_token)["id"]
-    template_id = import_template(access_token, root_id, "nifi_template.xml")
+    print("NiFi: importing template")
+    template_id = import_template(access_token, root_id, template_path)
+    print("NiFi: instantiating template")
     template = instantiate_template(access_token, root_id, template_id)
     services = get_all_controller_services(access_token, root_id)
+    print("NiFi: activating services")
     for service in services:
         enable_controller_service(
             access_token,
             service["id"],
             service["revision"],
         )
+    # waiting for all controller services to start
+    time.sleep(5)
+    print("NiFi: scheduling process group")
     schedule_process_group(access_token, root_id)
     components_ids = [
         x["component"]["id"]
@@ -48,5 +53,12 @@ def main():
     tasks = 0
     while tasks < 4:
         print(f"NiFi: PutHDFS not completed (ran {tasks} times)")
-        time.sleep(5)  # wait 5 secs
+        time.sleep(15)  # wait 15 secs
         tasks = check_run_status(access_token, put_hdfs_id)
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    urllib3.disable_warnings()
+
+    main()

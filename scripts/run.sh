@@ -13,7 +13,7 @@ echo "Cleaning results"
 rm ./Results/*.csv
 
 echo "Starting Docker Compose"
-docker compose -d
+docker compose up -d
 
 echo "HDFS: mesg ttyname failed fix"
 docker exec namenode sh -c \

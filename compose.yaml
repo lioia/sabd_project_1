@@ -16,21 +16,19 @@ services:
       - datanode-1
       - datanode-2
       - datanode-3
-  # HDFS DataNode
+  # HDFS DataNodes
   datanode-1:
     image: matnar/hadoop
     container_name: datanode-1
     hostname: slave1
     tty: true
     stdin_open: true
-  # HDFS DataNode
   datanode-2:
     image: matnar/hadoop
     container_name: datanode-2
     hostname: slave2
     tty: true
     stdin_open: true
-  # HDFS DataNode
   datanode-3:
     image: matnar/hadoop
     container_name: datanode-3
@@ -55,31 +53,36 @@ services:
     volumes:
       - ./src:/app/
       - ./config/nifi:/app/nifi
-  # Spark Worker node
-  spark-worker:
+  # Spark Worker nodes
+  spark-worker-1:
     image: spark:python3
-    container_name: spark-worker
-    hostname: spark-worker
+    container_name: spark-worker-1
+    hostname: spark-worker-1
     command: /bin/bash
     tty: true
     stdin_open: true
     depends_on:
       - spark-master
-    env_file:
-      - ./config/.env
+  spark-worker-2:
+    image: spark:python3
+    container_name: spark-worker-2
+    hostname: spark-worker-2
+    command: /bin/bash
+    tty: true
+    stdin_open: true
+    depends_on:
+      - spark-master
   # Data Ingestion
   nifi:
     image: apache/nifi
     container_name: nifi
     hostname: nifi
-    env_file:
-      - ./config/.env
     environment:
       SINGLE_USER_CREDENTIALS_USERNAME: ${NIFI_USERNAME}
       SINGLE_USER_CREDENTIALS_PASSWORD: ${NIFI_PASSWORD}
     ports:
       - 8443:8443
     volumes:
-      - ./config/hdfs:/data
+      - ./nifi/hdfs:/data
     depends_on:
       - namenode

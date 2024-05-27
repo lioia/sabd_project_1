@@ -1,49 +1,12 @@
 from typing import Any, Dict, List
-import time
-import os
 
-import requests
-import urllib3
 import xml.etree.ElementTree as etree
+import requests
 
-nifi_base_url = "https://nifi:8443/nifi-api"
-
-
-def run_nifi_flow():
-    urllib3.disable_warnings()
-
-    username = os.environ.get("NIFI_USERNAME")
-    password = os.environ.get("NIFI_PASSWORD")
-    if username is None or password is None:
-        raise KeyError("Environment variables for NiFi not set")
-
-    access_token = __nifi_login(username, password)
-    root_id = __nifi_get_root_pg(access_token)["id"]
-    template_id = __nifi_import_template(access_token, root_id, "nifi_template.xml")
-    template = __nifi_instantiate_template(access_token, root_id, template_id)
-    services = __nifi_get_all_controller_services(access_token, root_id)
-    for service in services:
-        __nifi_enable_controller_service(
-            access_token,
-            service["id"],
-            service["revision"],
-        )
-    __nifi_schedule_process_group(access_token, root_id)
-    put_hdfs_id = [
-        x["component"]["id"]
-        # search for processors
-        for x in template["processors"]
-        # if the type of the processor is PutHDFS
-        if x["component"]["type"] == "org.apache.nifi.processors.hadoop.PutHDFS"
-    ]
-    tasks = 0
-    while tasks < 3:
-        print(f"NiFi: PutHDFS not completed (ran {tasks} times)")
-        time.sleep(5)
-        tasks = __nifi_check_run_status(access_token, put_hdfs_id[0])
+nifi_base_url = "https://localhost:8443/nifi-api"
 
 
-def __nifi_login(username: str, password: str) -> str:
+def login(username: str, password: str) -> str:
     data = {"username": username, "password": password}
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     response = requests.post(
@@ -56,7 +19,7 @@ def __nifi_login(username: str, password: str) -> str:
     return response.text
 
 
-def __nifi_get_root_pg(access_token: str) -> Any:
+def get_root_pg(access_token: str) -> Any:
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.get(
         url=f"{nifi_base_url}/process-groups/root",
@@ -67,7 +30,7 @@ def __nifi_get_root_pg(access_token: str) -> Any:
     return response.json()
 
 
-def __nifi_import_template(access_token: str, root_id: str, template_path: str) -> str:
+def import_template(access_token: str, root_id: str, template_path: str) -> str:
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.post(
         url=f"{nifi_base_url}/process-groups/{root_id}/templates/upload",
@@ -86,7 +49,7 @@ def __nifi_import_template(access_token: str, root_id: str, template_path: str) 
     return id
 
 
-def __nifi_instantiate_template(
+def instantiate_template(
     access_token: str,
     root_id: str,
     template_id: str,
@@ -106,7 +69,7 @@ def __nifi_instantiate_template(
     return response.json()["flow"]
 
 
-def __nifi_schedule_process_group(access_token: str, root_id: str):
+def schedule_process_group(access_token: str, root_id: str):
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.put(
         url=f"{nifi_base_url}/flow/process-groups/{root_id}",
@@ -117,7 +80,7 @@ def __nifi_schedule_process_group(access_token: str, root_id: str):
     response.raise_for_status()
 
 
-def __nifi_get_all_controller_services(access_token: str, root_id: str) -> List[Any]:
+def get_all_controller_services(access_token: str, root_id: str) -> List[Any]:
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Accept": "application/json",
@@ -131,7 +94,7 @@ def __nifi_get_all_controller_services(access_token: str, root_id: str) -> List[
     return response.json()["controllerServices"]
 
 
-def __nifi_enable_controller_service(
+def enable_controller_service(
     access_token: str,
     controller_service_id: str,
     service_revision: Any,
@@ -146,7 +109,7 @@ def __nifi_enable_controller_service(
     response.raise_for_status()
 
 
-def __nifi_check_run_status(access_token: str, processor_id: str) -> int:
+def check_run_status(access_token: str, processor_id: str) -> int:
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.get(
         url=f"{nifi_base_url}/processors/{processor_id}",

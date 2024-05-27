@@ -13,7 +13,7 @@ echo "Cleaning results"
 rm ./Results/*.csv
 
 echo "Starting Docker Compose"
-docker compose --env-file ./config/.env up -d
+docker compose -d
 
 echo "HDFS: mesg ttyname failed fix"
 docker exec namenode sh -c \
@@ -46,6 +46,12 @@ docker exec namenode sh -c \
 echo "HDFS: copy dataset"
 docker exec namenode sh -c \
   "hdfs dfs -put /app/data/dataset.csv /data/dataset.csv"
+
+echo "NiFi: running flow"
+python -m venv .venv > /dev/null
+source .venv/bin/activate > /dev/null
+pip install -r requirements.txt > /dev/null
+python3 src/nifi/nifi.py
 
 echo "Spark: launching master"
 docker exec spark-master sh -c \

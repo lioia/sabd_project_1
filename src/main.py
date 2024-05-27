@@ -2,7 +2,7 @@ import argparse
 
 from spark.spark import run_spark_analysis, run_spark_check, run_spark_save
 
-# TODO: mongo
+# TODO: mongo/redis
 
 
 def main():
@@ -11,12 +11,6 @@ def main():
     save_parser = subparsers.add_parser(
         "save",
         help="Execute pipeline for saving to HDFS (running all query using RDD API)",
-    )
-    save_parser.add_argument(
-        "--nifi",
-        type=bool,
-        default=False,
-        help="Run NiFi flow",
     )
     save_parser.add_argument(
         "--format",
@@ -35,9 +29,7 @@ def main():
     )
     args = parser.parse_args()
     if args.command == "save":
-        nifi: bool = args.nifi
-        format: str = args.format
-        run_spark_save(nifi, format)
+        run_spark_save()
     elif args.command == "analysis":
         run_spark_analysis()
     elif args.command == "check":

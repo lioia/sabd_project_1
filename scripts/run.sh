@@ -29,23 +29,23 @@ docker exec namenode sh -c \
 
 echo "HDFS: creating folders"
 docker exec namenode sh -c \
-  "hdfs dfs -mkdir /data"
+  "hdfs dfs -mkdir /input"
 docker exec namenode sh -c \
-  "hdfs dfs -mkdir /filtered"
+  "hdfs dfs -mkdir /data"
 docker exec namenode sh -c \
   "hdfs dfs -mkdir /results"
 
 echo "HDFS: chown folders"
 docker exec namenode sh -c \
-  "hdfs dfs -chown nifi /data"
+  "hdfs dfs -chown nifi /input"
 docker exec namenode sh -c \
-  "hdfs dfs -chown nifi /filtered"
+  "hdfs dfs -chown nifi /data"
 docker exec namenode sh -c \
   "hdfs dfs -chown spark /results"
 
 echo "HDFS: copy dataset"
 docker exec namenode sh -c \
-  "hdfs dfs -put /app/data/dataset.csv /data/dataset.csv"
+  "hdfs dfs -put /app/data/dataset.csv /input/dataset.csv"
 
 echo "NiFi: running flow"
 python -m venv .venv > /dev/null

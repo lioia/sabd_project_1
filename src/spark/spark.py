@@ -4,8 +4,8 @@ from pyspark.sql import SparkSession
 
 from rdd import query_1_rdd, query_2_rdd, rdd_preprocess
 from df import df_preprocess, query_1_df, query_2_df
-from spark.utils import load_dataset, api_query_map
-from spark.utils import (
+from utils import load_dataset, api_query_map
+from utils import (
     check_results_1,
     check_results_2_1,
     check_results_2_2,
@@ -32,7 +32,7 @@ def run_spark_save():
     spark.stop()
 
 
-def run_spark_analysis():
+def run_spark_analysis(worker: int):
     # create performance output file
     analysis_file = open("/results/analysis.csv", "w+")
     # write header
@@ -42,23 +42,19 @@ def run_spark_analysis():
     apis = ["rdd", "df"]
     filenames = ["dataset.csv", "filtered.csv", "filtered.avro", "filtered.parquet"]
     queries = [1, 2]
-    workers = range(1, 9)
     # iterating through all the possible combinations
     for filename in filenames:
         for api in apis:
             for query in queries:
-                for worker in workers:
-                    delta = __run_spark_analysis(filename, api, query, worker)
-                    analysis_file.write(f"{api},{filename},{query},{worker},{delta}")
+                delta = __run_spark_analysis(filename, api, query)
+                analysis_file.write(f"{api},{filename},{query},{worker},{delta}")
 
 
 # helper function to run the Spark query for a specific combination
-def __run_spark_analysis(filename: str, api: str, query: int, worker: int) -> float:
+def __run_spark_analysis(filename: str, api: str, query: int) -> float:
     # create Spark session
     format = filename.split(".")[-1]
     spark = SparkSession.Builder().appName(f"sabd_{format}_{api}_{query}").getOrCreate()
-    # set number of workers
-    spark.conf.set("spark.executor.instances", worker)
 
     # start timer
     start_time = time.time()

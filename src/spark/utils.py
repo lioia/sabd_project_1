@@ -28,7 +28,16 @@ def load_dataset(spark: SparkSession, filename: str) -> DataFrame:
 
 
 def write_to_hdfs(df: DataFrame, file: str):
-    df.write.format("csv").option("header", True).save(f"hdfs://master:54310{file}")
+    (
+        # write CSV file
+        df.write.format("csv")
+        # include header
+        .option("header", True)
+        # overwrite if it already exists
+        .mode("overwrite")
+        # save to HDFS
+        .save(f"hdfs://master:54310{file}")
+    )
 
 
 def check_results_1(df1: DataFrame, df2: DataFrame):

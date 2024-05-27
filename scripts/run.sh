@@ -1,74 +1,49 @@
 #!/bin/bash
 
 # $1 command
+# $2 additional arguments: output (hdfs or mongo, only if $1 is save)
 
-cmd=${1:-save}
+cmd=${1:-save} # first argument of Spark application
+additional_arg="" # additional argument of Spark application
+workers=(3) # executing application just one time with 3 workers
 
 if [[ "$cmd" != "save" && "$cmd" != "analysis" && "$cmd" != "check" ]]; then
   echo "Error: command '$cmd' is not valid"
   exit 1
 fi
 
-echo "Cleaning results"
-rm ./Results/*.csv
+if [[ "$cmd" == "save" ]]; then
+  rm Results/query_1.csv
+  rm Results/query_2.csv
+fi
 
-echo "Starting Docker Compose"
-docker compose up -d
-
-echo "HDFS: mesg ttyname failed fix"
-docker exec namenode sh -c \
-  "echo '#!/bin/sh' > /usr/bin/mesg && chmod 755 /usr/bin/mesg"
-
-echo "HDFS: formatting"
-docker exec namenode sh -c \
-  "hdfs namenode -format"
-
-echo "HDFS: starting"
-docker exec namenode sh -c \
-  "/usr/local/hadoop/sbin/start-dfs.sh"
-
-echo "HDFS: creating folders"
-docker exec namenode sh -c \
-  "hdfs dfs -mkdir /input"
-docker exec namenode sh -c \
-  "hdfs dfs -mkdir /data"
-docker exec namenode sh -c \
-  "hdfs dfs -mkdir /results"
-
-echo "HDFS: chown folders"
-docker exec namenode sh -c \
-  "hdfs dfs -chown nifi /input"
-docker exec namenode sh -c \
-  "hdfs dfs -chown nifi /data"
-docker exec namenode sh -c \
-  "hdfs dfs -chown spark /results"
-
-echo "HDFS: copy dataset"
-docker exec namenode sh -c \
-  "hdfs dfs -put /app/data/dataset.csv /input/dataset.csv"
-
-echo "NiFi: running flow"
-python -m venv .venv > /dev/null
-source .venv/bin/activate > /dev/null
-pip install -r requirements.txt > /dev/null
-python3 src/nifi/nifi.py
-
-echo "Spark: launching master"
-docker exec spark-master sh -c \
-  "/opt/spark/sbin/start-master.sh"
-
-echo "Spark: launching worker"
-docker exec spark-worker sh -c \
-  "/opt/spark/sbin/start-worker.sh spark://spark-master:7077"
+if [[ "$cmd" == "analysis" ]]; then
+  # forces application to run multiple times
+  workers=(1 2 3 4 5 6 7 8) 
+fi
 
 echo "Launching Application"
-docker exec spark-master sh -c \
-  "/opt/spark/bin/spark-submit \
-    --master spark://spark-master:7077 \
-    /app/main.py $cmd"
+for w in "${workers[@]}"; do
+  if [[ "$cmd" == "analysis" ]]; then
+    echo "Executing $cmd with $w workers"
+    additional_arg="$w"
+  elif [[ "$cmd" == "save" ]]; then
+    echo "Running $cmd with $w workers"
+    # TODO: handle
+  fi
 
-echo "HDFS: copy results into local fs"
-docker exec namenode sh -c \
-  "hdfs dfs -get /results/query_1/*.csv /app/results/query_1.csv"
-docker exec namenode sh -c \
-  "hdfs dfs -getmerge /results/query_2_1/*.csv /results/query_2_2/*.csv /app/results/query_2.csv"
+  docker exec spark-master sh -c \
+    "/opt/spark/bin/spark-submit \
+      --master spark://spark-master:7077 \
+      --py-files /app/main.py,/app/spark/spark.py,/app/spark/rdd.py,/app/spark/df.py,/app/spark/utils.py \
+      --num-executors $w \
+      /app/main.py $cmd $additional_arg"
+done
+
+if [[ "$cmd" == "save" ]]; then
+  echo "HDFS: copy results into local fs"
+  docker exec namenode sh -c \
+    "hdfs dfs -get /results/query_1/*.csv /app/results/query_1.csv"
+  docker exec namenode sh -c \
+    "hdfs dfs -getmerge /results/query_2_1/*.csv /results/query_2_2/*.csv /app/results/query_2.csv"
+fi

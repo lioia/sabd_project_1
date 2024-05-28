@@ -1,17 +1,21 @@
 import argparse
 
 from spark.spark import run_spark_save, run_spark_check, run_spark_analysis
-# TODO: mongo/redis
 
 
 def main():
     parser = argparse.ArgumentParser(description="SABD Project 1")
     subparsers = parser.add_subparsers(title="sub-commands", dest="command")
-    subparsers.add_parser(
+    save_parser = subparsers.add_parser(
         "save",
         help="Execute pipeline for saving to HDFS (running all query using RDD API)",
     )
-    # TODO: save_parser output argument
+    save_parser.add_argument(
+        "location",
+        type=str,
+        choices=["hdfs", "mongo"],
+        help="Where to save the output",
+    )
     analysis_parser = subparsers.add_parser(
         "analysis",
         help="Execute pipeline for analysis",
@@ -28,7 +32,7 @@ def main():
     )
     args = parser.parse_args()
     if args.command == "save":
-        run_spark_save()
+        run_spark_save(args.location)
     elif args.command == "analysis":
         run_spark_analysis(args.workers)
     elif args.command == "check":

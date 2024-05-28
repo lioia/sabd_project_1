@@ -1,4 +1,7 @@
+import os
+from datetime import datetime
 from typing import Callable, Dict
+
 from pyspark.sql import DataFrame, SparkSession
 
 
@@ -27,16 +30,30 @@ def load_dataset(spark: SparkSession, filename: str) -> DataFrame:
     return format_map[format](f"hdfs://master:54310/data/{filename}")
 
 
-def write_to_hdfs(df: DataFrame, file: str):
+def save_to_hdfs(df: DataFrame, file: str):
     (
         # write CSV file
         df.write.format("csv")
-        # include header
-        .option("header", True)
         # overwrite if it already exists
         .mode("overwrite")
+        # include header
+        .option("header", True)
         # save to HDFS
         .save(f"hdfs://master:54310{file}")
+    )
+
+
+def save_to_mongodb(df: DataFrame, collection: str):
+    (
+        # write to mongo
+        df.write.format("mongodb")
+        # overwrite mode
+        .mode("overwrite")
+        # to database
+        .option("database", "spark")
+        # to collection
+        .option("collection", collection)
+        .save()
     )
 
 

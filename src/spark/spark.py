@@ -1,33 +1,60 @@
+import os
 import time
 
 from pyspark.sql import SparkSession
 
 from rdd import query_1_rdd, query_2_rdd, rdd_preprocess
 from df import df_preprocess, query_1_df, query_2_df
-from utils import load_dataset, api_query_map
 from utils import (
     check_results_1,
     check_results_2_1,
     check_results_2_2,
-    write_to_hdfs,
+    save_to_hdfs,
+    load_dataset,
+    api_query_map,
+    save_to_mongodb,
 )
 
 
 # TODO: choose API and format based on analysis results
-# TODO: choose where to save based on cli args
-def run_spark_save():
+def run_spark_save(location: str):
     # creating Spark session
-    spark = SparkSession.Builder().appName("sabd_save").getOrCreate()
+    if location == "hdfs":
+        spark = SparkSession.Builder().appName("sabd_save").getOrCreate()
+    elif location == "mongo":
+        username = os.environ.get("MONGO_USERNAME")
+        password = os.environ.get("MONGO_PASSWORD")
+        database = os.environ.get("MONGO_DATABASE")
+        if username is None or password is None or database is None:
+            raise KeyError("Environment Variables for Mongo not set")
+        uri = f"mongodb://{username}:{password}@mongo:27017/"
+        spark = (
+            # create new session builder
+            SparkSession.Builder()
+            # set session name
+            .appName("sabd_save")
+            # config mongo
+            .config("spark.mongodb.write.connection.uri", uri)
+            # create session
+            .getOrCreate()
+        )
+    else:
+        raise ValueError(f"Invalid location {location}, expected: hdfs or mongo")
     # load dataset
     rdd = load_dataset(spark, "filtered.parquet").rdd
     # running queries
     q1 = query_1_rdd(rdd)
     q2_1, q2_2 = query_2_rdd(rdd)
 
-    # save to HDFS
-    write_to_hdfs(q1, "/results/query_1/")
-    write_to_hdfs(q2_1, "/results/query_2_1")
-    write_to_hdfs(q2_2, "/results/query_2_2")
+    if location == "hdfs":
+        # save to HDFS
+        save_to_hdfs(q1, "/results/query_1/")
+        save_to_hdfs(q2_1, "/results/query_2_1")
+        save_to_hdfs(q2_2, "/results/query_2_2")
+    else:  # location == "mongo"
+        save_to_mongodb(q1, "query_1")
+        save_to_mongodb(q2_1, "query_2_1")
+        save_to_mongodb(q2_2, "query_2_2")
     # stop Spark
     spark.stop()
 
@@ -46,15 +73,19 @@ def run_spark_analysis(worker: int):
     for filename in filenames:
         for api in apis:
             for query in queries:
-                delta = __run_spark_analysis(filename, api, query)
+                delta = __run_spark_analysis(filename, api, query, worker)
                 analysis_file.write(f"{api},{filename},{query},{worker},{delta}")
 
 
 # helper function to run the Spark query for a specific combination
-def __run_spark_analysis(filename: str, api: str, query: int) -> float:
+def __run_spark_analysis(filename: str, api: str, query: int, worker: int) -> float:
     # create Spark session
     format = filename.split(".")[-1]
-    spark = SparkSession.Builder().appName(f"sabd_{format}_{api}_{query}").getOrCreate()
+    spark = (
+        SparkSession.Builder()
+        .appName(f"sabd_{format}_{api}_{query}_{worker}")
+        .getOrCreate()
+    )
 
     # start timer
     start_time = time.time()
@@ -63,7 +94,6 @@ def __run_spark_analysis(filename: str, api: str, query: int) -> float:
     df = load_dataset(spark, filename)
     rdd = df.rdd
     if filename == "dataset.csv":
-        # TODO: preprocessing
         if api == "df":
             df = df_preprocess(df)
         elif api == "rdd":

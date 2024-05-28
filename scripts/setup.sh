@@ -40,19 +40,19 @@ echo "HDFS: copy dataset"
 docker exec namenode sh -c \
   "hdfs dfs -put /app/data/dataset.csv /input/dataset.csv"
 
-echo "NiFi: running flow"
-python -m venv .venv > /dev/null
-source .venv/bin/activate > /dev/null
-pip install -r requirements.txt > /dev/null
-python3 nifi/main.py
-deactivate
-
 echo "Spark: launching master"
 docker exec spark-master sh -c \
   "/opt/spark/sbin/start-master.sh"
 
-echo "Spark: launching worker"
+echo "Spark: launching workers"
 docker exec spark-worker-1 sh -c \
   "/opt/spark/sbin/start-worker.sh spark://spark-master:7077"
 docker exec spark-worker-2 sh -c \
   "/opt/spark/sbin/start-worker.sh spark://spark-master:7077"
+
+echo "NiFi: running flow"
+python -m venv .venv &> /dev/null
+source .venv/bin/activate &> /dev/null
+pip install -r requirements.txt &> /dev/null
+python3 nifi/main.py
+deactivate

@@ -1,9 +1,60 @@
-from pyspark.sql import DataFrame
+import os
 from datetime import datetime
+from typing import Callable, Dict
+
+from pyspark.sql import DataFrame, SparkSession
 
 
-def write_to_hdfs(df: DataFrame, file: str):
-    df.write.format("csv").option("header", True).save(f"hdfs://master:54310{file}")
+from rdd import query_1_rdd, query_2_rdd
+from df import query_1_df, query_2_df
+
+api_query_map: Dict[str, Dict[int, Callable]] = {
+    "rdd": {
+        1: query_1_rdd,
+        2: query_2_rdd,
+    },
+    "df": {
+        1: query_1_df,
+        2: query_2_df,
+    },
+}
+
+
+def load_dataset(spark: SparkSession, filename: str) -> DataFrame:
+    format_map: Dict[str, Callable[..., DataFrame]] = {
+        "csv": spark.read.option("inferSchema", True).csv,
+        "parquet": spark.read.parquet,
+        "avro": spark.read.format("avro").load,
+    }
+    format = filename.split(".")[-1]
+    return format_map[format](f"hdfs://master:54310/data/{filename}")
+
+
+def save_to_hdfs(df: DataFrame, file: str):
+    (
+        # write CSV file
+        df.write.format("csv")
+        # overwrite if it already exists
+        .mode("overwrite")
+        # include header
+        .option("header", True)
+        # save to HDFS
+        .save(f"hdfs://master:54310{file}")
+    )
+
+
+def save_to_mongodb(df: DataFrame, collection: str):
+    (
+        # write to mongo
+        df.write.format("mongodb")
+        # overwrite mode
+        .mode("overwrite")
+        # to database
+        .option("database", "spark")
+        # to collection
+        .option("collection", collection)
+        .save()
+    )
 
 
 def check_results_1(df1: DataFrame, df2: DataFrame):

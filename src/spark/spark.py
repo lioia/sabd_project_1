@@ -12,7 +12,7 @@ from utils import (
     save_to_hdfs,
     load_dataset,
     api_query_map,
-    save_to_mongodb,
+    save_to_redis,
 )
 
 
@@ -21,25 +21,24 @@ def run_spark_save(location: str):
     # creating Spark session
     if location == "hdfs":
         spark = SparkSession.Builder().appName("sabd_save").getOrCreate()
-    elif location == "mongo":
-        username = os.environ.get("MONGO_USERNAME")
-        password = os.environ.get("MONGO_PASSWORD")
-        database = os.environ.get("MONGO_DATABASE")
-        if username is None or password is None or database is None:
-            raise KeyError("Environment Variables for Mongo not set")
-        uri = f"mongodb://{username}:{password}@mongo:27017/"
+    elif location == "redis":
+        password = os.environ.get("REDIS_PASSWORD")
+        if password is None:
+            raise KeyError("Environment Variables for Redis not set")
         spark = (
             # create new session builder
             SparkSession.Builder()
             # set session name
             .appName("sabd_save")
-            # config mongo
-            .config("spark.mongodb.write.connection.uri", uri)
+            # config redis
+            .config("spark.redis.host", "redis")
+            .config("spark.redis.port", "6379")
+            .config("spark.redis.auth", password)
             # create session
             .getOrCreate()
         )
     else:
-        raise ValueError(f"Invalid location {location}, expected: hdfs or mongo")
+        raise ValueError(f"Invalid location {location}, expected: hdfs or redis")
     # load dataset
     rdd = load_dataset(spark, "filtered.parquet").rdd
     # running queries
@@ -51,10 +50,10 @@ def run_spark_save(location: str):
         save_to_hdfs(q1, "/results/query_1/")
         save_to_hdfs(q2_1, "/results/query_2_1")
         save_to_hdfs(q2_2, "/results/query_2_2")
-    else:  # location == "mongo"
-        save_to_mongodb(q1, "query_1")
-        save_to_mongodb(q2_1, "query_2_1")
-        save_to_mongodb(q2_2, "query_2_2")
+    else:  # location == "redis"
+        save_to_redis(q1, "query_1")
+        save_to_redis(q2_1, "query_2_1")
+        save_to_redis(q2_2, "query_2_2")
     # stop Spark
     spark.stop()
 

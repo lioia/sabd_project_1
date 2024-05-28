@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # $1 command
-# $2 additional arguments: output (hdfs or mongo, only if $1 is save)
+# $2 additional arguments: output (hdfs or redis, only if $1 is save)
 
 cmd=${1:-save} # first argument of Spark application
 additional_arg="" # additional argument of Spark application
@@ -24,28 +24,27 @@ fi
 
 echo "Launching Application"
 for w in "${workers[@]}"; do
-  mongo_conf=""
+  redis_conf=""
   if [[ "$cmd" == "analysis" ]]; then
     echo "Executing $cmd with $w workers"
     additional_arg="$w"
   elif [[ "$cmd" == "save" ]]; then
     echo "Running $cmd with $w workers"
     additional_arg=${2:-hdfs}
-    if [[ "$additional_arg" != "hdfs" && "$additional_arg" != "mongo" ]]; then
+    if [[ "$additional_arg" != "hdfs" && "$additional_arg" != "redis" ]]; then
       echo "Invalid location $additional_arg, using hdfs as default"
       additional_arg="hdfs"
     fi
-    if [[ "$additional_arg" == "mongo" ]]; then
-      mongo_conf="--conf spark.driver.extraJavaOptions=\"-Divy.cache.dir=/tmp -Divy.home=/tmp\" \
-      --packages org.mongodb.spark:mongo-spark-connector_2.12:10.3.0 "
+    if [[ "$additional_arg" == "redis" ]]; then
+      redis_conf="--conf spark.driver.extraJavaOptions=\"-Divy.cache.dir=/tmp -Divy.home=/tmp\" \
+      --packages com.redislabs/spark-redis_2.12:3.1.0 "
     fi
   fi
-
   docker exec spark-master sh -c \
     "/opt/spark/bin/spark-submit \
       --master spark://spark-master:7077 \
       --py-files /app/main.py,/app/spark/spark.py,/app/spark/rdd.py,/app/spark/df.py,/app/spark/utils.py \
-      $mongo_conf \
+      $redis_conf \
       --num-executors $w \
       /app/main.py $cmd $additional_arg"
 done

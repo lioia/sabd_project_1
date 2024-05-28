@@ -13,7 +13,7 @@ def main():
     save_parser.add_argument(
         "location",
         type=str,
-        choices=["hdfs", "mongo"],
+        choices=["hdfs", "redis"],
         help="Where to save the output",
     )
     analysis_parser = subparsers.add_parser(

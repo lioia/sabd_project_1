@@ -24,7 +24,7 @@ This script will:
 Execute script:
 
 ```bash
-./scripts/run.sh [command=save]
+./scripts/run.sh [command]
 ```
 
 Where `command` can be:
@@ -44,6 +44,13 @@ Create Python virtual environment:
 ```bash
 python -m venv .venv
 source ./.venv/bin/activate
+```
+
+Access MongoDB:
+
+```bash
+docker container exec -it mongo /bin/bash
+mongosh mongo:27017 --username <username>
 ```
 
 ## Queries

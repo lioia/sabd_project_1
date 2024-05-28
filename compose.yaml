@@ -50,6 +50,9 @@ services:
       - namenode
     environment:
       SPARK_LOCAL_IP: spark-master
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_DATABASE: ${MONGO_DATABASE}
     volumes:
       - ./src/:/app/
   # Spark Worker nodes
@@ -60,6 +63,10 @@ services:
     command: /bin/bash
     tty: true
     stdin_open: true
+    environment:
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_DATABASE: ${MONGO_DATABASE}
     depends_on:
       - spark-master
   spark-worker-2:
@@ -69,6 +76,10 @@ services:
     command: /bin/bash
     tty: true
     stdin_open: true
+    environment:
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_DATABASE: ${MONGO_DATABASE}
     depends_on:
       - spark-master
   # Data Ingestion
@@ -85,8 +96,21 @@ services:
       - ./nifi/hdfs:/data
     depends_on:
       - namenode
-    healthcheck:
-      test: curl -k --fail https://localhost:8443 || exit 1
-      interval: 30s
-      timeout: 15s
-      retries: 3
+  mongo:
+    image: mongo
+    container_name: mongo
+    hostname: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    depends_on:
+      - spark-master
+  mongo-express:
+    image: mongo-express
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongo:27017/
+      ME_CONFIG_BASICAUTH: false

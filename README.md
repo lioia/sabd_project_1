@@ -50,7 +50,7 @@ Access Redis:
 
 ```bash
 docker container exec -it redis /bin/sh
-redis-cli -u $REDIS_PASSWORD
+redis-cli -a $REDIS_PASSWORD
 ```
 
 ## Queries

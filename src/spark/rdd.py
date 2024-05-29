@@ -32,7 +32,7 @@ def query_1_rdd(rdd: RDD[Tuple[str, str, str, int, str]]):
         # reducing by key (date, vault_id)
         .reduceByKey(add)
         # filtering based on requested values
-        .filter(lambda x: x[1] == 4 or x[1] == 3 or x[1] == 2)
+        .filter(lambda x: x[1] in [2, 3, 4])
         # flattening key
         .map(lambda x: (x[0][0], x[0][1], x[1]))
         # sorting by value, then by date, then by vault_id

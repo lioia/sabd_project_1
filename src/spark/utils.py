@@ -43,14 +43,16 @@ def save_to_hdfs(df: DataFrame, file: str):
     )
 
 
-def save_to_redis(df: DataFrame, table: str):
+def save_to_mongo(df: DataFrame, collection: str):
     (
-        # write to redis
-        df.write.format("org.apache.spark.sql.redis")
+        # write to mongo
+        df.write.format("mongodb")
         # overwrite mode
         .mode("overwrite")
-        # to table
-        .option("table", table)
+        # to database
+        .option("database", "spark")
+        # to collection
+        .option("collection", collection)
         .save()
     )
 

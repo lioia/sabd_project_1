@@ -12,7 +12,7 @@ from utils import (
     save_to_hdfs,
     load_dataset,
     api_query_map,
-    save_to_redis,
+    save_to_mongo,
 )
 
 
@@ -21,24 +21,24 @@ def run_spark_save(location: str):
     # creating Spark session
     if location == "hdfs":
         spark = SparkSession.Builder().appName("sabd_save").getOrCreate()
-    elif location == "redis":
-        password = os.environ.get("REDIS_PASSWORD")
-        if password is None:
-            raise KeyError("Environment Variables for Redis not set")
+    elif location == "mongo":
+        username = os.environ.get("MONGO_USERNAME")
+        password = os.environ.get("MONGO_PASSWORD")
+        if username is None or password is None:
+            raise KeyError("Environment Variables for Mongo not set")
+        uri = f"mongodb://{username}:{password}@mongo:27017/"
         spark = (
             # create new session builder
             SparkSession.Builder()
             # set session name
             .appName("sabd_save")
-            # config redis
-            .config("spark.redis.host", "redis")
-            .config("spark.redis.port", "6379")
-            .config("spark.redis.auth", password)
+            # config mongo
+            .config("spark.mongodb.write.connection.uri", uri)
             # create session
             .getOrCreate()
         )
     else:
-        raise ValueError(f"Invalid location {location}, expected: hdfs or redis")
+        raise ValueError(f"Invalid location {location}, expected: hdfs or mongo")
     # load dataset
     rdd = load_dataset(spark, "filtered.parquet").rdd
     # running queries
@@ -50,10 +50,10 @@ def run_spark_save(location: str):
         save_to_hdfs(q1, "/results/query_1/")
         save_to_hdfs(q2_1, "/results/query_2_1")
         save_to_hdfs(q2_2, "/results/query_2_2")
-    else:  # location == "redis"
-        save_to_redis(q1, "query_1")
-        save_to_redis(q2_1, "query_2_1")
-        save_to_redis(q2_2, "query_2_2")
+    else:  # location == "mongo"
+        save_to_mongo(q1, "query_1")
+        save_to_mongo(q2_1, "query_2_1")
+        save_to_mongo(q2_2, "query_2_2")
     # stop Spark
     spark.stop()
 

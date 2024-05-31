@@ -31,7 +31,7 @@ Where `command` can be:
 
 - `save`: executes the entire pipeline using RDD API and saves to HDFS;
   additional arguments:
-  - `location`: where to save the output (`hdfs` or `redis`)
+  - `location`: where to save the output (`hdfs` or `mongo`)
 - `analysis`: executes the pipeline using NiFi comparing the two APIs (RDD and
   DataFrame) for all the different file formats (`avro`, `parquet`, `csv`)
 - `check`: executes the RDD and DataFrame API checking whether the results are
@@ -46,12 +46,7 @@ python -m venv .venv
 source ./.venv/bin/activate
 ```
 
-Access Redis:
-
-```bash
-docker container exec -it redis /bin/sh
-redis-cli -a $REDIS_PASSWORD
-```
+Access Mongo at <localhost:8081>
 
 ## Queries
 

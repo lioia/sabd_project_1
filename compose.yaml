@@ -50,7 +50,8 @@ services:
       - namenode
     environment:
       SPARK_LOCAL_IP: spark-master
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
     volumes:
       - ./src/:/app/
   # Spark Worker nodes
@@ -62,7 +63,8 @@ services:
     tty: true
     stdin_open: true
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
     depends_on:
       - spark-master
   spark-worker-2:
@@ -73,7 +75,8 @@ services:
     tty: true
     stdin_open: true
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
     depends_on:
       - spark-master
   # Data Ingestion
@@ -90,10 +93,35 @@ services:
       - ./nifi/hdfs:/data
     depends_on:
       - namenode
-  redis:
-    image: redis:alpine
-    container_name: redis
-    hostname: redis
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+  mongo:
+    image: mongo
+    container_name: mongo
+    hostname: mongo
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    hostname: mongo-express
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongo:27017/
+      ME_CONFIG_BASICAUTH: false
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    hostname: grafana
+    environment:
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: meln5674-mongodb-community
+      GF_INSTALL_PLUGINS: ${GRAFANA_MONGO_URL};meln5674-mongodb-community"
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USERNAME}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_SECURITY_ANGULAR_SUPPORT_ENABLED: true
+    ports:
+      - 3000:3000

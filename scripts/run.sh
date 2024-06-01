@@ -24,28 +24,25 @@ fi
 
 echo "Launching Application"
 for w in "${workers[@]}"; do
-  mongo_conf=""
-  if [[ "$cmd" == "analysis" ]]; then
-    echo "Executing $cmd with $w workers"
-    additional_arg="$w"
-  elif [[ "$cmd" == "save" ]]; then
-    echo "Running $cmd with $w workers"
+  echo "Executing $cmd with $w workers"
+
+  if [[ "$cmd" == "save" ]]; then
     additional_arg=${2:-hdfs}
-    if [[ "$additional_arg" != "hdfs" && "$additional_arg" != "mongo" ]]; then
+    # set default location to hdfs
+    if [[ "$additional_arg" != "hdfs" && "$additional_arg" != "mongo" ]]; then 
       echo "Invalid location $additional_arg, using hdfs as default"
       additional_arg="hdfs"
     fi
-    if [[ "$additional_arg" == "mongo" ]]; then
-      mongo_conf="--conf spark.driver.extraJavaOptions=\"-Divy.cache.dir=/tmp -Divy.home=/tmp\" \
-      --packages org.mongodb.spark:mongo-spark-connector_2.12:10.3.0 "
-    fi
   fi
+
   docker exec spark-master sh -c \
     "/opt/spark/bin/spark-submit \
       --master spark://spark-master:7077 \
       --py-files /app/main.py,/app/spark/spark.py,/app/spark/rdd.py,/app/spark/df.py,/app/spark/utils.py \
-      $mongo_conf \
-      --num-executors $w \
+      --conf \"spark.cores.max=$w\" \
+      --conf \"spark.executor.cores=1\" \
+      --conf spark.driver.extraJavaOptions=\"-Divy.cache.dir=/tmp -Divy.home=/tmp\" \
+      --packages org.apache.spark:spark-avro_2.12:3.5.1,org.mongodb.spark:mongo-spark-connector_2.12:10.3.0 \
       /app/main.py $cmd $additional_arg"
 done
 

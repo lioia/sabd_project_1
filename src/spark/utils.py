@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from typing import Callable, Dict
 
@@ -22,7 +21,7 @@ api_query_map: Dict[str, Dict[int, Callable]] = {
 
 def load_dataset(spark: SparkSession, filename: str) -> DataFrame:
     format_map: Dict[str, Callable[..., DataFrame]] = {
-        "csv": spark.read.option("inferSchema", True).csv,
+        "csv": spark.read.option("inferSchema", True).option("header", True).csv,
         "parquet": spark.read.parquet,
         "avro": spark.read.format("avro").load,
     }

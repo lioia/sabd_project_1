@@ -15,11 +15,11 @@ from pyspark.sql import DataFrame
 
 def rdd_preprocess(df: DataFrame) -> RDD[Tuple[str, str, str, int, str]]:
     return (
-        # filter all the headers (every ~60k events there is a header)
-        df.rdd.filter(lambda x: x[4].isdecimal())
+        # filter all the headers (every ~600k events there is a header)
+        df.rdd.filter(lambda x: str(x[4]).isdecimal())
         # mapping into (date, serial_number, model, failure, vault_id)
         # date is truncated into the format YYYY-MM-DD
-        .map(lambda x: (x[0][:10], x[1], x[2], int(x[3]), x[4]))
+        .map(lambda x: (str(x[0])[:10], x[1], x[2], int(x[3]), x[4]))
         # caching as it is required by the two queries
         .cache()
     )

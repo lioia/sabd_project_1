@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Tuple
 
 from pyspark.sql import SparkSession
 
@@ -58,11 +59,9 @@ def run_spark_save(location: str):
     spark.stop()
 
 
-def run_spark_analysis(worker: int):
-    # create performance output file
-    analysis_file = open("/results/analysis.csv", "w+")
-    # write header
-    analysis_file.write("api,filename,query,workers,time")
+def run_spark_analysis():
+    # create analysis list
+    performance = []
 
     # variables
     apis = ["rdd", "df"]
@@ -72,19 +71,23 @@ def run_spark_analysis(worker: int):
     for filename in filenames:
         for api in apis:
             for query in queries:
-                delta = __run_spark_analysis(filename, api, query, worker)
-                analysis_file.write(f"{api},{filename},{query},{worker},{delta}")
+                print(f"Analysis: {api},{filename},{query}")
+                worker, delta = __run_spark_analysis(filename, api, query)
+                performance.append((api, filename, query, worker, delta))
+    print("api,filename,query,worker,delta")
+    for api, filename, query, worker, delta in performance:
+        print(f"{api},{filename},{query},{worker},{delta}")
 
 
 # helper function to run the Spark query for a specific combination
-def __run_spark_analysis(filename: str, api: str, query: int, worker: int) -> float:
+def __run_spark_analysis(filename: str, api: str, query: int) -> Tuple[int, float]:
     # create Spark session
     format = filename.split(".")[-1]
-    spark = (
-        SparkSession.Builder()
-        .appName(f"sabd_{format}_{api}_{query}_{worker}")
-        .getOrCreate()
-    )
+    spark = SparkSession.Builder().appName(f"sabd_{format}_{api}_{query}").getOrCreate()
+    conf_worker = spark.sparkContext.getConf().get("spark.cores.max")
+    if conf_worker is None:
+        raise ValueError("spark.cores.max was not set")
+    worker = int(conf_worker)
 
     # start timer
     start_time = time.time()
@@ -106,7 +109,7 @@ def __run_spark_analysis(filename: str, api: str, query: int, worker: int) -> fl
     delta = end_time - start_time
     # stop Spark session
     spark.stop()
-    return delta
+    return worker, delta
 
 
 def run_spark_check():

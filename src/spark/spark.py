@@ -17,7 +17,6 @@ from utils import (
 )
 
 
-# TODO: choose API and format based on analysis results
 def run_spark_save(location: str):
     # creating Spark session
     if location == "hdfs":
@@ -41,10 +40,10 @@ def run_spark_save(location: str):
     else:
         raise ValueError(f"Invalid location {location}, expected: hdfs or mongo")
     # load dataset
-    rdd = load_dataset(spark, "filtered.parquet").rdd
+    df = load_dataset(spark, "filtered.parquet")
     # running queries
-    q1 = query_1_rdd(rdd)
-    q2_1, q2_2 = query_2_rdd(rdd)
+    q1 = query_1_df(df)[0]
+    q2_1, q2_2 = query_2_df(df)
 
     if location == "hdfs":
         # save to HDFS
@@ -102,7 +101,9 @@ def __run_spark_analysis(filename: str, api: str, query: int) -> Tuple[int, floa
             rdd = rdd_preprocess(df)
 
     # run query based on API
-    api_query_map[api][query](df if api == "df" else rdd)
+    dfs = api_query_map[api][query](df if api == "df" else rdd)
+    for res in dfs:
+        res.show()
     # stop timer
     end_time = time.time()
     # calculated execution time

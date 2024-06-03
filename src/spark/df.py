@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import collect_set, concat_ws, desc, sum, to_date
@@ -14,11 +14,10 @@ def df_preprocess(df: DataFrame) -> DataFrame:
         .drop("date")
         # rename date_no_time to date
         .withColumnRenamed("date_no_time", "date")
-        .cache()
     )
 
 
-def query_1_df(df: DataFrame) -> DataFrame:
+def query_1_df(df: DataFrame) -> List[DataFrame]:
     df = (
         # group by key (date, vault_id)
         df.groupBy(["date", "vault_id"])
@@ -27,7 +26,7 @@ def query_1_df(df: DataFrame) -> DataFrame:
         # rename sum(failure) to count
         .withColumnRenamed("sum(failure)", "count")
     )
-    return (
+    return [
         # filter based on number of failures
         df.filter((df["count"] == 4) | (df["count"] == 3) | (df["count"] == 2))
         # sort with descending failures and ascending key
@@ -37,10 +36,10 @@ def query_1_df(df: DataFrame) -> DataFrame:
         )
         # retarget to single partition
         .coalesce(1)
-    )
+    ]
 
 
-def query_2_df(df: DataFrame) -> Tuple[DataFrame, DataFrame]:
+def query_2_df(df: DataFrame) -> List[DataFrame]:
     df_ranking_1 = (
         # select only the necessary columns
         df.select(["model", "failure"])
@@ -100,4 +99,4 @@ def query_2_df(df: DataFrame) -> Tuple[DataFrame, DataFrame]:
         .drop("collect_set(model)")
     )
 
-    return df_ranking_1, df_ranking_2
+    return [df_ranking_1, df_ranking_2]

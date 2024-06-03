@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 from operator import add
 
 from pyspark import RDD
@@ -20,31 +20,29 @@ def rdd_preprocess(df: DataFrame) -> RDD[Tuple[str, str, str, int, str]]:
         # mapping into (date, serial_number, model, failure, vault_id)
         # date is truncated into the format YYYY-MM-DD
         .map(lambda x: (str(x[0])[:10], x[1], x[2], int(x[3]), x[4]))
-        # caching as it is required by the two queries
-        .cache()
     )
 
 
-def query_1_rdd(rdd: RDD[Tuple[str, str, str, int, str]]):
+def query_1_rdd(rdd: RDD[Tuple[str, str, str, int, str]]) -> List[DataFrame]:
     output_rdd = (
         # mapping into ((date, vault_id), failures)
         rdd.map(lambda x: ((x[0], x[4]), x[3]))
         # reducing by key (date, vault_id)
         .reduceByKey(add)
         # filtering based on requested values
-        .filter(lambda x: x[1] in [2, 3, 4])
+        .filter(lambda x: x[1] in {2, 3, 4})
         # flattening key
         .map(lambda x: (x[0][0], x[0][1], x[1]))
         # sorting by value, then by date, then by vault_id
         .sortBy(lambda x: (-x[2], x[0], x[1]))  # type: ignore[type-var]
     )
     # convert to DataFrame to save as CSV
-    return output_rdd.toDF(["date", "vault_id", "count"]).coalesce(1)
+    return [output_rdd.toDF(["date", "vault_id", "count"]).coalesce(1)]
 
 
 def query_2_rdd(
     rdd: RDD[Tuple[str, str, str, int, str]],
-) -> Tuple[DataFrame, DataFrame]:
+) -> List[DataFrame]:
     ranking_1 = (
         # mapping into (model, failure)
         rdd.map(lambda x: (x[2], x[3]))
@@ -83,4 +81,4 @@ def query_2_rdd(
         .limit(10)
     )
 
-    return df_ranking_1, df_ranking_2
+    return [df_ranking_1, df_ranking_2]

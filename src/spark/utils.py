@@ -1,22 +1,7 @@
 from datetime import datetime
-from typing import Callable, Dict, List
+from typing import Callable, Dict
 
 from pyspark.sql import DataFrame, SparkSession
-
-
-from rdd import query_1_rdd, query_2_rdd
-from df import query_1_df, query_2_df
-
-api_query_map: Dict[str, Dict[int, Callable[..., List[DataFrame]]]] = {
-    "rdd": {
-        1: query_1_rdd,
-        2: query_2_rdd,
-    },
-    "df": {
-        1: query_1_df,
-        2: query_2_df,
-    },
-}
 
 
 def load_dataset(spark: SparkSession, filename: str) -> DataFrame:
@@ -42,12 +27,12 @@ def save_to_hdfs(df: DataFrame, file: str):
     )
 
 
-def save_to_mongo(df: DataFrame, collection: str):
+def save_to_mongo(df: DataFrame, collection: str, mode="overwrite"):
     (
         # write to mongo
         df.write.format("mongodb")
-        # overwrite mode
-        .mode("overwrite")
+        # overwrite or append
+        .mode(mode)
         # to database
         .option("database", "spark")
         # to collection

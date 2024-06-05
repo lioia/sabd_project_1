@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Tuple
+from typing import List, Tuple
 
 from pyspark.sql import SparkSession
 
@@ -12,7 +12,6 @@ from utils import (
     check_results_2_2,
     save_to_hdfs,
     load_dataset,
-    api_query_map,
     save_to_mongo,
 )
 
@@ -42,7 +41,7 @@ def run_spark_save(location: str):
     # load dataset
     df = load_dataset(spark, "filtered.parquet")
     # running queries
-    q1 = query_1_df(df)[0]
+    q1 = query_1_df(df)
     q2_1, q2_2 = query_2_df(df)
 
     if location == "hdfs":
@@ -62,55 +61,135 @@ def run_spark_analysis():
     # create analysis list
     performance = []
 
-    # variables
-    apis = ["rdd", "df"]
-    filenames = ["dataset.csv", "filtered.csv", "filtered.avro", "filtered.parquet"]
-    queries = [1, 2]
-    # iterating through all the possible combinations
+    # testing every filtered dataset
+    filenames = ["filtered.csv", "filtered.avro", "filtered.parquet"]
     for filename in filenames:
-        for api in apis:
-            for query in queries:
-                print(f"Analysis: {api},{filename},{query}")
-                worker, delta = __run_spark_analysis(filename, api, query)
-                performance.append((api, filename, query, worker, delta))
-    print("api,filename,query,worker,delta")
-    for api, filename, query, worker, delta in performance:
-        print(f"{api},{filename},{query},{worker},{delta}")
+        p = __run_spark_analysis_filtered(filename)
+        performance.extend(p)
+    # testing original dataset
+    p = __run_spark_analysis_not_filtered()
+    performance.extend(p)
+
+    # Save Results
+
+    username = os.environ.get("MONGO_USERNAME")
+    password = os.environ.get("MONGO_PASSWORD")
+    if username is None or password is None:
+        raise KeyError("Environment Variables for Mongo not set")
+    uri = f"mongodb://{username}:{password}@mongo:27017/"
+    # create Spark Session for MongoDB
+    spark = (
+        # create new session builder
+        SparkSession.Builder()
+        # set session name
+        .appName("sabd_save")
+        # config mongo
+        .config("spark.mongodb.write.connection.uri", uri)
+        # create session
+        .getOrCreate()
+    )
+    # creating DataFrame from performances
+    df = spark.createDataFrame(
+        performance,
+        ["api", "filename", "query", "worker", "delta"],
+    )
+    # save performances to MongoDB
+    save_to_mongo(df, "performance", "append")
+    # stopping spark
+    spark.stop()
 
 
 # helper function to run the Spark query for a specific combination
-def __run_spark_analysis(filename: str, api: str, query: int) -> Tuple[int, float]:
+def __run_spark_analysis_filtered(
+    filename: str,
+) -> List[Tuple[str, str, int, int, float]]:
+    # filename,api,query,worker,delta
+    performances: List[Tuple[str, str, int, int, float]] = []
     # create Spark session
     format = filename.split(".")[-1]
-    spark = SparkSession.Builder().appName(f"sabd_{format}_{api}_{query}").getOrCreate()
+    spark = (
+        SparkSession.Builder()
+        .appName(f"sabd_{format}")
+        .config("spark.logConf", "true")
+        .getOrCreate()
+    )
+    spark.sparkContext.setLogLevel("OFF")
     conf_worker = spark.sparkContext.getConf().get("spark.cores.max")
     if conf_worker is None:
         raise ValueError("spark.cores.max was not set")
     worker = int(conf_worker)
 
-    # start timer
-    start_time = time.time()
-
     # load dataset based on format
-    df = load_dataset(spark, filename)
+    df = load_dataset(spark, filename).cache()
     rdd = df.rdd
-    if filename == "dataset.csv":
-        if api == "df":
-            df = df_preprocess(df)
-        elif api == "rdd":
-            rdd = rdd_preprocess(df)
 
-    # run query based on API
-    dfs = api_query_map[api][query](df if api == "df" else rdd)
-    for res in dfs:
-        res.show()
-    # stop timer
-    end_time = time.time()
-    # calculated execution time
-    delta = end_time - start_time
-    # stop Spark session
+    # DataFrame
+    start = time.time()
+    q1 = query_1_df(df)
+    q1.collect()
+    performances.append((filename, "df", 1, worker, time.time() - start))
+    start = time.time()
+    q2_1, q2_2 = query_2_df(df)
+    q2_1.collect()
+    q2_2.collect()
+    performances.append((filename, "df", 2, worker, time.time() - start))
+
+    # RDD
+    start = time.time()
+    q1 = query_1_rdd(rdd)
+    q1.collect()
+    performances.append((filename, "rdd", 1, worker, time.time() - start))
+    start = time.time()
+    q2_1, q2_2 = query_2_rdd(rdd)
+    q2_1.collect()
+    q2_2.collect()
+    performances.append((filename, "rdd", 2, worker, time.time() - start))
+
     spark.stop()
-    return worker, delta
+    return performances
+
+
+def __run_spark_analysis_not_filtered() -> List[Tuple[str, str, str, int, float]]:
+    performances = []
+    spark = (
+        SparkSession.Builder()
+        .appName(f"sabd_{format}")
+        .config("spark.logConf", "true")
+        .getOrCreate()
+    )
+    spark.sparkContext.setLogLevel("OFF")
+    conf_worker = spark.sparkContext.getConf().get("spark.cores.max")
+    if conf_worker is None:
+        raise ValueError("spark.cores.max was not set")
+    worker = int(conf_worker)
+
+    # load complete dataset
+    filename = "dataset.csv"
+    df = load_dataset(spark, filename)
+
+    # DataFrame
+    start = time.time()
+    q1 = query_1_df(df_preprocess(df))
+    q1.collect()
+    performances.append((filename, "df", 1, worker, time.time() - start))
+    start = time.time()
+    q2_1, q2_2 = query_2_df(df_preprocess(df))
+    q2_1.collect()
+    q2_2.collect()
+    performances.append((filename, "df", 2, worker, time.time() - start))
+
+    # RDD
+    start = time.time()
+    q1 = query_1_rdd(rdd_preprocess(df))
+    q1.collect()
+    performances.append((filename, "rdd", 1, worker, time.time() - start))
+    start = time.time()
+    q2_1, q2_2 = query_2_rdd(rdd_preprocess(df))
+    q2_1.collect()
+    q2_2.collect()
+    performances.append((filename, "rdd", 2, worker, time.time() - start))
+
+    return performances
 
 
 def run_spark_check():

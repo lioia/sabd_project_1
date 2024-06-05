@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Tuple
 from operator import add
 
 from pyspark import RDD
@@ -23,7 +23,7 @@ def rdd_preprocess(df: DataFrame) -> RDD[Tuple[str, str, str, int, str]]:
     )
 
 
-def query_1_rdd(rdd: RDD[Tuple[str, str, str, int, str]]) -> List[DataFrame]:
+def query_1_rdd(rdd: RDD[Tuple[str, str, str, int, str]]) -> DataFrame:
     output_rdd = (
         # mapping into ((date, vault_id), failures)
         rdd.map(lambda x: ((x[0], x[4]), x[3]))
@@ -37,12 +37,12 @@ def query_1_rdd(rdd: RDD[Tuple[str, str, str, int, str]]) -> List[DataFrame]:
         .sortBy(lambda x: (-x[2], x[0], x[1]))  # type: ignore[type-var]
     )
     # convert to DataFrame to save as CSV
-    return [output_rdd.toDF(["date", "vault_id", "count"]).coalesce(1)]
+    return output_rdd.toDF(["date", "vault_id", "count"])
 
 
 def query_2_rdd(
     rdd: RDD[Tuple[str, str, str, int, str]],
-) -> List[DataFrame]:
+) -> Tuple[DataFrame, DataFrame]:
     ranking_1 = (
         # mapping into (model, failure)
         rdd.map(lambda x: (x[2], x[3]))
@@ -51,7 +51,7 @@ def query_2_rdd(
         # sorting by the failure count
         .sortBy(lambda x: (-x[1], x[0]))  # type: ignore[type-var]
     )
-    df_ranking_1 = ranking_1.toDF(["model", "failures_count"]).coalesce(1).limit(10)
+    df_ranking_1 = ranking_1.toDF(["model", "failures_count"]).limit(10)
 
     # Ranking 2
     vault_failures = (
@@ -75,10 +75,8 @@ def query_2_rdd(
         .map(lambda x: (x[0], int(x[1][0]), ",".join(x[1][1])))
         .sortBy(lambda x: (-x[1], x[0]))  # type: ignore[type-var]
     )
-    df_ranking_2 = (
-        ranking_2.toDF(["vault_id", "failures_count", "list_of_models"])
-        .coalesce(1)
-        .limit(10)
-    )
+    df_ranking_2 = ranking_2.toDF(
+        ["vault_id", "failures_count", "list_of_models"]
+    ).limit(10)
 
-    return [df_ranking_1, df_ranking_2]
+    return df_ranking_1, df_ranking_2

@@ -53,8 +53,6 @@ def query_2_df(df: DataFrame) -> Tuple[DataFrame, DataFrame]:
         .groupBy("vault_id")
         # reduce by key
         .agg(sum("failure").alias("failures_count"))
-        # limit to 10 (ranking)
-        .limit(10)
     )
     vault_models = (
         # select all the necessary columns
@@ -69,17 +67,15 @@ def query_2_df(df: DataFrame) -> Tuple[DataFrame, DataFrame]:
     df_ranking_2 = (
         # join the two dataframes (based only on the vault_id in the first df)
         vault_failures.join(vault_models, "vault_id", how="left")
-        # order by decreasing failures_count and increasing vault_id
-        .orderBy(["failures_count", "vault_id"], ascending=[False, True])
-    )
-
-    df_ranking_2 = (
         # concatenate set to a string into list_of_models column
-        df_ranking_2.withColumn(
-            "list_of_models", concat_ws(",", df_ranking_2["collect_set(model)"])
+        .withColumn(
+            "list_of_models",
+            concat_ws(",", vault_models["collect_set(model)"]),
         )
         # drop redundant collect_set(model) column
         .drop("collect_set(model)")
+        # order by decreasing failures_count and increasing vault_id
+        .orderBy(["failures_count", "vault_id"], ascending=[False, True])
         # limit to 10 (ranking)
         .limit(10)
     )

@@ -49,6 +49,8 @@ docker exec spark-worker-1 sh -c \
   "/opt/spark/sbin/start-worker.sh spark://spark-master:7077"
 docker exec spark-worker-2 sh -c \
   "/opt/spark/sbin/start-worker.sh spark://spark-master:7077"
+docker exec spark-worker-3 sh -c \
+  "/opt/spark/sbin/start-worker.sh spark://spark-master:7077"
 
 echo "NiFi: running flow"
 python -m venv .venv &> /dev/null

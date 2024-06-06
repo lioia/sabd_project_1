@@ -67,6 +67,18 @@ services:
       MONGO_PASSWORD: ${MONGO_PASSWORD}
     depends_on:
       - spark-master
+  spark-worker-3:
+    image: spark:python3
+    container_name: spark-worker-3
+    hostname: spark-worker-3
+    command: /bin/bash
+    tty: true
+    stdin_open: true
+    environment:
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+    depends_on:
+      - spark-master
   spark-worker-2:
     image: spark:python3
     container_name: spark-worker-2
@@ -122,6 +134,11 @@ services:
       GF_INSTALL_PLUGINS: ${GRAFANA_MONGO_URL};meln5674-mongodb-community"
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USERNAME}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
-      GF_SECURITY_ANGULAR_SUPPORT_ENABLED: true
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
     ports:
       - 3000:3000
+    volumes:
+      - ./grafana/datasource.yaml:/etc/grafana/provisioning/datasources/mongo.yaml
+      - ./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/boards.yaml
+      - ./grafana/dashboards:/etc/grafana/dashboards

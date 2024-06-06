@@ -1,0 +1,233 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_MONGO",
+      "label": "mongo",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "meln5674-mongodb-community",
+      "pluginName": "mongodb-community"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.4.3"
+    },
+    {
+      "type": "datasource",
+      "id": "meln5674-mongodb-community",
+      "name": "mongodb-community",
+      "version": "0.2.0"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "meln5674-mongodb-community",
+        "uid": "mongo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "vault_id",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "aggregation": "[ { \"$addFields\": { \"list_of_models\": { \"$split\": [ \"$list_of_models\", \",\" ] } } }, { \"$match\": { \"vault_id\": { \"$in\": [${vaults:csv}] }, \"list_of_models\": { \"$in\": ${models:json} } } }, { \"$project\": { \"_id\": 0, \"vault_id\": 1, \"failures_count\": 1, \"list_of_models\": 1 } } ]",
+          "autoTimeBound": false,
+          "autoTimeSort": false,
+          "collection": "query_2_2",
+          "database": "spark",
+          "datasource": {
+            "type": "meln5674-mongodb-community",
+            "uid": "mongo"
+          },
+          "labelFields": [
+            "sensorID"
+          ],
+          "legendFormat": "",
+          "queryType": "Table",
+          "refId": "A",
+          "schemaInference": true,
+          "schemaInferenceDepth": 20,
+          "timestampField": "timestamp",
+          "timestampFormat": "",
+          "valueFieldTypes": [
+            "float64"
+          ],
+          "valueFields": [
+            "measurement"
+          ]
+        }
+      ],
+      "title": "Panel Title",
+      "type": "barchart"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "meln5674-mongodb-community",
+          "uid": "mongo"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Vault ID",
+        "multi": true,
+        "name": "vaults",
+        "options": [],
+        "query": {
+          "aggregation": "[{ \"$group\": { \"_id\": \"$vault_id\" } }, { \"$project\": { \"_id\": \"$_id\" } }]\n",
+          "collection": "query_2_2",
+          "database": "spark",
+          "fieldName": "_id",
+          "fieldType": "int32"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "meln5674-mongodb-community",
+          "uid": "mongo"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Model",
+        "multi": true,
+        "name": "models",
+        "options": [],
+        "query": {
+          "aggregation": "[ { \"$addFields\": { \"list_of_models\": { \"$split\": [\"$list_of_models\", \",\"] } } }, { \"$unwind\": \"$list_of_models\" }, { \"$group\": { \"_id\": \"$list_of_models\" } }, { \"$project\": { \"_id\": 1 } } ]\n",
+          "collection": "query_2_2",
+          "database": "spark",
+          "fieldName": "_id",
+          "fieldType": "string"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SABD Query 2 Ranking 2",
+  "uid": "ddnynfz8c2txcd",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,223 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_MONGO",
+      "label": "mongo",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "meln5674-mongodb-community",
+      "pluginName": "mongodb-community"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.4.3"
+    },
+    {
+      "type": "datasource",
+      "id": "meln5674-mongodb-community",
+      "name": "mongodb-community",
+      "version": "0.2.0"
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "meln5674-mongodb-community",
+        "uid": "mongo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "aggregation": "[{ \"$match\": { \"vault_id\": { \"$in\": [${vaults:csv}] } } }, { \"$project\": { \"_id\": 0, \"count\": 1, \"date\": 1, \"vault_id\": 1 } }]\n",
+          "autoTimeBound": false,
+          "autoTimeSort": false,
+          "collection": "query_1",
+          "database": "spark",
+          "datasource": {
+            "type": "meln5674-mongodb-community",
+            "uid": "mongo"
+          },
+          "labelFields": [
+            "sensorID"
+          ],
+          "legendFormat": "",
+          "queryType": "Table",
+          "refId": "A",
+          "schemaInference": true,
+          "schemaInferenceDepth": 20,
+          "timestampField": "timestamp",
+          "timestampFormat": "",
+          "valueFieldTypes": [
+            "float64"
+          ],
+          "valueFields": [
+            "measurement"
+          ]
+        }
+      ],
+      "title": "Query 1 Time Series",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "time",
+                "targetField": "date"
+              }
+            ],
+            "fields": {}
+          }
+        }
+      ],
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "meln5674-mongodb-community",
+          "uid": "mongo"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Vault ID",
+        "multi": true,
+        "name": "vaults",
+        "options": [],
+        "query": {
+          "aggregation": "[{ \"$group\": { \"_id\": \"$vault_id\" } }, { \"$project\": { \"_id\": \"$_id\" } }]\n",
+          "collection": "query_1",
+          "database": "spark",
+          "fieldName": "_id",
+          "fieldType": "int32"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "2023-04-03T22:00:00.000Z",
+    "to": "2023-04-20T22:00:00.000Z"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SABD Query 1",
+  "uid": "fdnyn40emjev4f",
+  "version": 1,
+  "weekStart": ""
+}

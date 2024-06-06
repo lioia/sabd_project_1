@@ -15,31 +15,29 @@ from pyspark.sql import DataFrame
 
 def rdd_preprocess(df: DataFrame) -> RDD[Tuple[str, str, str, int, str]]:
     return (
-        # filter all the headers (every ~60k events there is a header)
-        df.rdd.filter(lambda x: x[4].isdecimal())
+        # filter all the headers (every ~600k events there is a header)
+        df.rdd.filter(lambda x: str(x[4]).isdecimal())
         # mapping into (date, serial_number, model, failure, vault_id)
         # date is truncated into the format YYYY-MM-DD
-        .map(lambda x: (x[0][:10], x[1], x[2], int(x[3]), x[4]))
-        # caching as it is required by the two queries
-        .cache()
+        .map(lambda x: (str(x[0])[:10], x[1], x[2], int(x[3]), x[4]))
     )
 
 
-def query_1_rdd(rdd: RDD[Tuple[str, str, str, int, str]]):
+def query_1_rdd(rdd: RDD[Tuple[str, str, str, int, str]]) -> DataFrame:
     output_rdd = (
         # mapping into ((date, vault_id), failures)
         rdd.map(lambda x: ((x[0], x[4]), x[3]))
         # reducing by key (date, vault_id)
         .reduceByKey(add)
         # filtering based on requested values
-        .filter(lambda x: x[1] == 4 or x[1] == 3 or x[1] == 2)
+        .filter(lambda x: x[1] in {2, 3, 4})
         # flattening key
         .map(lambda x: (x[0][0], x[0][1], x[1]))
         # sorting by value, then by date, then by vault_id
         .sortBy(lambda x: (-x[2], x[0], x[1]))  # type: ignore[type-var]
     )
     # convert to DataFrame to save as CSV
-    return output_rdd.toDF(["date", "vault_id", "count"]).coalesce(1)
+    return output_rdd.toDF(["date", "vault_id", "count"])
 
 
 def query_2_rdd(
@@ -53,7 +51,7 @@ def query_2_rdd(
         # sorting by the failure count
         .sortBy(lambda x: (-x[1], x[0]))  # type: ignore[type-var]
     )
-    df_ranking_1 = ranking_1.toDF(["model", "failures_count"]).coalesce(1).limit(10)
+    df_ranking_1 = ranking_1.toDF(["model", "failures_count"]).limit(10)
 
     # Ranking 2
     vault_failures = (
@@ -77,10 +75,8 @@ def query_2_rdd(
         .map(lambda x: (x[0], int(x[1][0]), ",".join(x[1][1])))
         .sortBy(lambda x: (-x[1], x[0]))  # type: ignore[type-var]
     )
-    df_ranking_2 = (
-        ranking_2.toDF(["vault_id", "failures_count", "list_of_models"])
-        .coalesce(1)
-        .limit(10)
-    )
+    df_ranking_2 = ranking_2.toDF(
+        ["vault_id", "failures_count", "list_of_models"]
+    ).limit(10)
 
     return df_ranking_1, df_ranking_2

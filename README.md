@@ -29,7 +29,7 @@ Execute script:
 
 Where `command` can be:
 
-- `save`: executes the entire pipeline using RDD API and saves to HDFS;
+- `save`: executes the entire pipeline using RDD API and saves the output;
   additional arguments:
   - `location`: where to save the output (`hdfs` or `mongo`)
 - `analysis`: executes the pipeline using NiFi comparing the two APIs (RDD and
@@ -43,15 +43,18 @@ Create Python virtual environment:
 
 ```bash
 python -m venv .venv
-source ./.venv/bin/activate
+source .venv/bin/activate
 ```
 
-Access MongoDB:
+Access Mongo:
 
-```bash
-docker container exec -it mongo /bin/bash
-mongosh mongo:27017 --username <username>
-```
+- Mongo-Express at: <localhost:8081>
+- Using `mongosh`:
+
+  ```bash
+  docker container exec -it mongo /bin/bash
+  mongosh -u $MONGO_USERNAME -p $MONGO_PASSWORD mongo:27017
+  ```
 
 ## Queries
 

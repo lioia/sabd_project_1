@@ -1,22 +1,20 @@
 import os
-import time
 
 from pyspark.sql import SparkSession
 
 from rdd import query_1_rdd, query_2_rdd, rdd_preprocess
 from df import df_preprocess, query_1_df, query_2_df
+from spark.analysis import analysis_not_filtered, analysis_filtered
 from utils import (
     check_results_1,
     check_results_2_1,
     check_results_2_2,
     save_to_hdfs,
     load_dataset,
-    api_query_map,
-    save_to_mongodb,
+    save_to_mongo,
 )
 
 
-# TODO: choose API and format based on analysis results
 def run_spark_save(location: str):
     # creating Spark session
     if location == "hdfs":
@@ -24,8 +22,7 @@ def run_spark_save(location: str):
     elif location == "mongo":
         username = os.environ.get("MONGO_USERNAME")
         password = os.environ.get("MONGO_PASSWORD")
-        database = os.environ.get("MONGO_DATABASE")
-        if username is None or password is None or database is None:
+        if username is None or password is None:
             raise KeyError("Environment Variables for Mongo not set")
         uri = f"mongodb://{username}:{password}@mongo:27017/"
         spark = (
@@ -41,10 +38,10 @@ def run_spark_save(location: str):
     else:
         raise ValueError(f"Invalid location {location}, expected: hdfs or mongo")
     # load dataset
-    rdd = load_dataset(spark, "filtered.parquet").rdd
+    df = load_dataset(spark, "filtered.parquet")
     # running queries
-    q1 = query_1_rdd(rdd)
-    q2_1, q2_2 = query_2_rdd(rdd)
+    q1 = query_1_df(df)
+    q2_1, q2_2 = query_2_df(df)
 
     if location == "hdfs":
         # save to HDFS
@@ -52,62 +49,30 @@ def run_spark_save(location: str):
         save_to_hdfs(q2_1, "/results/query_2_1")
         save_to_hdfs(q2_2, "/results/query_2_2")
     else:  # location == "mongo"
-        save_to_mongodb(q1, "query_1")
-        save_to_mongodb(q2_1, "query_2_1")
-        save_to_mongodb(q2_2, "query_2_2")
+        save_to_mongo(q1, "query_1")
+        save_to_mongo(q2_1, "query_2_1")
+        save_to_mongo(q2_2, "query_2_2")
     # stop Spark
     spark.stop()
 
 
-def run_spark_analysis(worker: int):
-    # create performance output file
-    analysis_file = open("/results/analysis.csv", "w+")
-    # write header
-    analysis_file.write("api,filename,query,workers,time")
+def run_spark_analysis():
+    # create analysis list
+    performances = []
 
-    # variables
-    apis = ["rdd", "df"]
-    filenames = ["dataset.csv", "filtered.csv", "filtered.avro", "filtered.parquet"]
-    queries = [1, 2]
-    # iterating through all the possible combinations
+    # testing every filtered dataset
+    filenames = ["filtered.csv", "filtered.avro", "filtered.parquet"]
     for filename in filenames:
-        for api in apis:
-            for query in queries:
-                delta = __run_spark_analysis(filename, api, query, worker)
-                analysis_file.write(f"{api},{filename},{query},{worker},{delta}")
+        p = analysis_filtered(filename)
+        performances.extend(p)
+    # testing original dataset
+    p = analysis_not_filtered()
+    performances.extend(p)
 
-
-# helper function to run the Spark query for a specific combination
-def __run_spark_analysis(filename: str, api: str, query: int, worker: int) -> float:
-    # create Spark session
-    format = filename.split(".")[-1]
-    spark = (
-        SparkSession.Builder()
-        .appName(f"sabd_{format}_{api}_{query}_{worker}")
-        .getOrCreate()
-    )
-
-    # start timer
-    start_time = time.time()
-
-    # load dataset based on format
-    df = load_dataset(spark, filename)
-    rdd = df.rdd
-    if filename == "dataset.csv":
-        if api == "df":
-            df = df_preprocess(df)
-        elif api == "rdd":
-            rdd = rdd_preprocess(df)
-
-    # run query based on API
-    api_query_map[api][query](df if api == "df" else rdd)
-    # stop timer
-    end_time = time.time()
-    # calculated execution time
-    delta = end_time - start_time
-    # stop Spark session
-    spark.stop()
-    return delta
+    # Print Results
+    print("filename,api,query,worker,load_time,exec_time")
+    for p in performances:
+        print(f"{p[0]},{p[1]},{p[2]},{p[3]},{p[4]},{p[5]}")
 
 
 def run_spark_check():
@@ -117,6 +82,7 @@ def run_spark_check():
     df = spark.read.csv(
         "hdfs://master:54310/data/dataset.csv",
         inferSchema=True,
+        header=True,
     ).cache()
     # RDD pre-process
     filtered_rdd = rdd_preprocess(df)

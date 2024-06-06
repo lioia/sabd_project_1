@@ -1,84 +1,64 @@
 from typing import Tuple
 
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import collect_set, concat_ws, desc, sum, to_date
+from pyspark.sql.functions import collect_set, concat_ws, sum, to_date
 
 
 def df_preprocess(df: DataFrame) -> DataFrame:
     return (
         # select only the necessary columns
         df.select(["date", "serial_number", "model", "failure", "vault_id"])
-        # create new column date_no_time to map date column (remove time)
-        .withColumn("date_no_time", to_date(df["date"]))
-        # drop date column
-        .drop("date")
-        # rename date_no_time to date
-        .withColumnRenamed("date_no_time", "date")
-        .cache()
+        # remove time from date column (format YYYY-mm-DD)
+        .withColumn("date", to_date(df["date"]))
     )
 
 
 def query_1_df(df: DataFrame) -> DataFrame:
     df = (
+        df.drop("serial_number", "model")
         # group by key (date, vault_id)
-        df.groupBy(["date", "vault_id"])
+        .groupBy("date", "vault_id")
         # reduce failures
-        .agg(sum("failure"))
-        # rename sum(failure) to count
-        .withColumnRenamed("sum(failure)", "count")
+        .agg(sum("failure").alias("count"))
     )
     return (
         # filter based on number of failures
-        df.filter((df["count"] == 4) | (df["count"] == 3) | (df["count"] == 2))
+        df.filter(df["count"].isin(4, 3, 2))
         # sort with descending failures and ascending key
         .orderBy(
             ["count", "date", "vault_id"],
             ascending=[False, True, True],
         )
-        # retarget to single partition
-        .coalesce(1)
     )
 
 
 def query_2_df(df: DataFrame) -> Tuple[DataFrame, DataFrame]:
     df_ranking_1 = (
         # select only the necessary columns
-        df.select(["model", "failure"])
+        df.drop("date", "serial_number", "vault_id")
         # group by model (key)
         .groupBy("model")
         # reduce by key
-        .agg(sum("failure"))
-        # rename to failures_count
-        .withColumnRenamed("sum(failure)", "failures_count")
+        .agg(sum("failure").alias("failures_count"))
         # order with decreasing failures_count
         .orderBy(["failures_count", "model"], ascending=[False, True])
-        # retarget to single partition
-        .coalesce(1)
         # limit to 10 (ranking)
         .limit(10)
     )
 
     vault_failures = (
         # select only the necessary columns
-        df.select(["vault_id", "failure"])
+        df.drop("date", "serial_number", "model")
         # group by vault_id (key)
         .groupBy("vault_id")
         # reduce by key
-        .agg(sum("failure"))
-        # rename to failures_count
-        .withColumnRenamed("sum(failure)", "failures_count")
-        # order with decreasing failures_count
-        .orderBy(desc("failures_count"))
-        # retarget to single partition
-        .coalesce(1)
-        # limit to 10 (ranking)
-        .limit(10)
+        .agg(sum("failure").alias("failures_count"))
     )
     vault_models = (
+        # select all the necessary columns
+        df.drop("date", "serial_number")
         # filter models with failure
-        df.filter(df["failure"] > 0)
-        # select necessary columns
-        .select(["vault_id", "model"])
+        .filter(df["failure"] > 0)
         # group by vault_id (key)
         .groupBy("vault_id")
         # reduce model to set
@@ -86,18 +66,18 @@ def query_2_df(df: DataFrame) -> Tuple[DataFrame, DataFrame]:
     )
     df_ranking_2 = (
         # join the two dataframes (based only on the vault_id in the first df)
-        vault_failures.join(vault_models, ["vault_id"], how="left")
-        # order by decreasing failures_count and increasing vault_id
-        .orderBy(["failures_count", "vault_id"], ascending=[False, True])
-    )
-
-    df_ranking_2 = (
+        vault_failures.join(vault_models, "vault_id", how="left")
         # concatenate set to a string into list_of_models column
-        df_ranking_2.withColumn(
-            "list_of_models", concat_ws(",", df_ranking_2["collect_set(model)"])
+        .withColumn(
+            "list_of_models",
+            concat_ws(",", vault_models["collect_set(model)"]),
         )
         # drop redundant collect_set(model) column
         .drop("collect_set(model)")
+        # order by decreasing failures_count and increasing vault_id
+        .orderBy(["failures_count", "vault_id"], ascending=[False, True])
+        # limit to 10 (ranking)
+        .limit(10)
     )
 
     return df_ranking_1, df_ranking_2

@@ -16,15 +16,9 @@ def main():
         choices=["hdfs", "mongo"],
         help="Where to save the output",
     )
-    analysis_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "analysis",
         help="Execute pipeline for analysis",
-    )
-    analysis_parser.add_argument(
-        "workers",
-        type=int,
-        default=3,
-        help="Number of spark executors",
     )
     subparsers.add_parser(
         "check",
@@ -34,7 +28,7 @@ def main():
     if args.command == "save":
         run_spark_save(args.location)
     elif args.command == "analysis":
-        run_spark_analysis(args.workers)
+        run_spark_analysis()
     elif args.command == "check":
         run_spark_check()
 

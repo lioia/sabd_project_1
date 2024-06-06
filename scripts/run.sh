@@ -35,7 +35,7 @@ echo "Executing $cmd with $w workers"
 docker exec spark-master sh -c \
   "/opt/spark/bin/spark-submit \
     --master spark://spark-master:7077 \
-    --py-files /app/main.py,/app/spark/spark.py,/app/spark/rdd.py,/app/spark/df.py,/app/spark/utils.py \
+    --py-files /app/main.py,/app/spark/spark.py,/app/spark/rdd.py,/app/spark/df.py,/app/spark/utils.py,/app/spark/analysis.py \
     --conf \"spark.cores.max=$w\" \
     --conf \"spark.executor.cores=1\" \
     --conf spark.driver.extraJavaOptions=\"-Divy.cache.dir=/tmp -Divy.home=/tmp\" \

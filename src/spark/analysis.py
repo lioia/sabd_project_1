@@ -92,14 +92,14 @@ def analysis_not_filtered() -> List[Tuple[str, str, str, int, float, float]]:
     performances.append((filename, "df", 2, worker, load_time, time.time() - start))
 
     # # RDD
-    # start = time.time()
-    # q1 = query_1_rdd(rdd_preprocess(df))
-    # q1.collect()
-    # performances.append((filename, "rdd", 1, worker, load_time, time.time() - start))
-    # start = time.time()
-    # q2_1, q2_2 = query_2_rdd(rdd_preprocess(df))
-    # q2_1.collect()
-    # q2_2.collect()
-    # performances.append((filename, "rdd", 2, worker, load_time, time.time() - start))
+    start = time.time()
+    q1 = query_1_rdd(rdd_preprocess(df))
+    q1.collect()
+    performances.append((filename, "rdd", 1, worker, load_time, time.time() - start))
+    start = time.time()
+    q2_1, q2_2 = query_2_rdd(rdd_preprocess(df))
+    q2_1.collect()
+    q2_2.collect()
+    performances.append((filename, "rdd", 2, worker, load_time, time.time() - start))
 
     return performances

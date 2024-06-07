@@ -5,12 +5,15 @@ from pyspark.sql import DataFrame, SparkSession
 
 
 def load_dataset(spark: SparkSession, filename: str) -> DataFrame:
+    # assign each file format into the corresponding reading function
     format_map: Dict[str, Callable[..., DataFrame]] = {
         "csv": spark.read.option("inferSchema", True).option("header", True).csv,
         "parquet": spark.read.parquet,
         "avro": spark.read.format("avro").load,
     }
+    # get the file format
     format = filename.split(".")[-1]
+    # call the read function for the file format
     return format_map[format](f"hdfs://master:54310/data/{filename}")
 
 
@@ -42,14 +45,19 @@ def save_to_mongo(df: DataFrame, collection: str, mode="overwrite"):
 
 
 def check_results_1(df1: DataFrame, df2: DataFrame):
+    # get results from RDD
     output_rdd = df1.collect()
+    # get results from DataFrame
     output_df = df2.collect()
+    # check size
     if len(output_rdd) != len(output_df):
         print(f"Check 1 failed: different size ({len(output_rdd)} vs {len(output_df)})")
         return
+    # iterate through all the results
     for i in range(len(output_rdd)):
-        row_rdd = output_rdd[i]
-        row_df = output_df[i]
+        row_rdd = output_rdd[i]  # get RDD row
+        row_df = output_df[i]  # get DataFrame Row
+        # check each value
         if (
             row_rdd["date"] != datetime.strftime(row_df["date"], "%Y-%m-%d")
             or row_rdd["vault_id"] != row_df["vault_id"]

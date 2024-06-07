@@ -9,7 +9,7 @@ from spark.utils import load_dataset
 
 
 def analysis_filtered(filename: str) -> List[Tuple[str, str, int, int, float, float]]:
-    # filename,api,query,worker,delta
+    # filename,api,query,worker,load_time,exec_time
     performances: List[Tuple[str, str, int, int, float, float]] = []
     # create Spark session
     format = filename.split(".")[-1]
@@ -19,17 +19,22 @@ def analysis_filtered(filename: str) -> List[Tuple[str, str, int, int, float, fl
         .config("spark.logConf", "true")
         .getOrCreate()
     )
+    # remove logging
     spark.sparkContext.setLogLevel("OFF")
+    # get number of workers
     conf_worker = spark.sparkContext.getConf().get("spark.cores.max")
     if conf_worker is None:
         raise ValueError("spark.cores.max was not set")
+    # convert number of workers into number
     worker = int(conf_worker)
 
     # load dataset based on format
     df = load_dataset(spark, filename).cache()
+    # start timer
     start = time.time()
     # action on dataset loading (so the first query is not influenced by this)
     df.head()
+    # dataset loading time
     load_time = time.time() - start
 
     # DataFrame

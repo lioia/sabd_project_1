@@ -51,7 +51,12 @@ def query_2_rdd(
         # sorting by the failure count
         .sortBy(lambda x: (-x[1], x[0]))  # type: ignore[type-var]
     )
-    df_ranking_1 = ranking_1.toDF(["model", "failures_count"]).limit(10)
+    df_ranking_1 = (
+        # converting to DataFrame to assign names to the columns
+        ranking_1.toDF(["model", "failures_count"])
+        # limit to 10 results
+        .limit(10)
+    )
 
     # Ranking 2
     vault_failures = (
@@ -67,16 +72,24 @@ def query_2_rdd(
         .map(lambda x: (x[4], x[2]))
         # grouping into (vault_id, list_of_models)
         .groupByKey()
+        # mapping models into a set (remove repetitions)
         .mapValues(set)
     )
 
     ranking_2 = (
+        # join the two RDDs
         vault_failures.join(vault_models)
+        # mapping into (vault_id, failures_count, list_of_models)
+        # where list_of_models is obtained by joining the set of models
         .map(lambda x: (x[0], int(x[1][0]), ",".join(x[1][1])))
+        # sort by decreasing failures count and increasing vault ids
         .sortBy(lambda x: (-x[1], x[0]))  # type: ignore[type-var]
     )
-    df_ranking_2 = ranking_2.toDF(
-        ["vault_id", "failures_count", "list_of_models"]
-    ).limit(10)
+    df_ranking_2 = (
+        # convert to DataFrame to assign names to the columns
+        ranking_2.toDF(["vault_id", "failures_count", "list_of_models"])
+        # limit results to 10
+        .limit(10)
+    )
 
     return df_ranking_1, df_ranking_2

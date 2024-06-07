@@ -17,6 +17,7 @@ from nifi_api import (
 
 
 def main():
+    # load env vars
     username = os.environ.get("NIFI_USERNAME")
     password = os.environ.get("NIFI_PASSWORD")
     template_path = os.environ.get("NIFI_TEMPLATE_PATH")
@@ -59,6 +60,7 @@ def main():
 
 if __name__ == "__main__":
     load_dotenv()
+    # NiFi is running on a not secure HTTPS connection; requests will warn on this
     urllib3.disable_warnings()
 
     main()

@@ -15,6 +15,7 @@ def df_preprocess(df: DataFrame) -> DataFrame:
 
 def query_1_df(df: DataFrame) -> DataFrame:
     df = (
+        # remove not used columns
         df.drop("serial_number", "model")
         # group by key (date, vault_id)
         .groupBy("date", "vault_id")
@@ -55,21 +56,21 @@ def query_2_df(df: DataFrame) -> Tuple[DataFrame, DataFrame]:
         .agg(sum("failure").alias("failures_count"))
     )
     vault_models = (
-        # select all the necessary columns
+        # select only the necessary columns
         df.drop("date", "serial_number")
         # filter models with failure
         .filter(df["failure"] > 0)
         # group by vault_id (key)
         .groupBy("vault_id")
         # reduce model to set
-        .agg(collect_set("model"))
+        .agg(collect_set("model"))  # saves to collect_set(model)
     )
     df_ranking_2 = (
         # join the two dataframes (based only on the vault_id in the first df)
         vault_failures.join(vault_models, "vault_id", how="left")
-        # concatenate set to a string into list_of_models column
+        # concatenate set of models into a string
         .withColumn(
-            "list_of_models",
+            "list_of_models",  # new column name
             concat_ws(",", vault_models["collect_set(model)"]),
         )
         # drop redundant collect_set(model) column

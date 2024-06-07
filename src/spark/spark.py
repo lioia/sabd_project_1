@@ -18,12 +18,15 @@ from utils import (
 def run_spark_save(location: str):
     # creating Spark session
     if location == "hdfs":
+        # standard session
         spark = SparkSession.Builder().appName("sabd_save").getOrCreate()
     elif location == "mongo":
+        # get username and password from env vars
         username = os.environ.get("MONGO_USERNAME")
         password = os.environ.get("MONGO_PASSWORD")
         if username is None or password is None:
             raise KeyError("Environment Variables for Mongo not set")
+        # mongo connection uri
         uri = f"mongodb://{username}:{password}@mongo:27017/"
         spark = (
             # create new session builder
@@ -39,7 +42,7 @@ def run_spark_save(location: str):
         raise ValueError(f"Invalid location {location}, expected: hdfs or mongo")
     # load dataset
     df = load_dataset(spark, "filtered.parquet")
-    # running queries
+    # run queries
     q1 = query_1_df(df)
     q2_1, q2_2 = query_2_df(df)
 
@@ -48,7 +51,7 @@ def run_spark_save(location: str):
         save_to_hdfs(q1, "/results/query_1/")
         save_to_hdfs(q2_1, "/results/query_2_1")
         save_to_hdfs(q2_2, "/results/query_2_2")
-    else:  # location == "mongo"
+    else:  # location == "mongo"; save to mongo
         save_to_mongo(q1, "query_1")
         save_to_mongo(q2_1, "query_2_1")
         save_to_mongo(q2_2, "query_2_2")
@@ -57,7 +60,7 @@ def run_spark_save(location: str):
 
 
 def run_spark_analysis():
-    # create analysis list
+    # create performances list
     performances = []
 
     # testing every filtered dataset

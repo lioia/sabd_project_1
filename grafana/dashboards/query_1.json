@@ -71,6 +71,7 @@
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 0,
+            "axisSoftMin": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -132,7 +133,7 @@
       },
       "targets": [
         {
-          "aggregation": "[{ \"$match\": { \"vault_id\": { \"$in\": [${vaults:csv}] } } }, { \"$project\": { \"_id\": 0, \"count\": 1, \"date\": 1, \"vault_id\": 1 } }]\n",
+          "aggregation": "[{ \"$match\": { \"vault_id\": { \"$in\": [${vaults:csv}] } } }, { \"$project\": { \"_id\": 0, \"count\": 1, \"date\": 1, \"vault_id\": 1 } }, { \"$project\": { \"count\": 1, \"date\": 1 } }]",
           "autoTimeBound": false,
           "autoTimeSort": false,
           "collection": "query_1",

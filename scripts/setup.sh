@@ -1,7 +1,6 @@
 #!/bin/bash
 
 echo "Cleaning up"
-rm ./Results/*.csv
 docker compose stop
 docker compose rm -f
 

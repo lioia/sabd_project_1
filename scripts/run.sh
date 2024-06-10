@@ -12,11 +12,6 @@ if [[ "$cmd" != "save" && "$cmd" != "analysis" && "$cmd" != "check" ]]; then
   exit 1
 fi
 
-if [[ "$cmd" == "save" && "$2" == "hdfs" ]]; then
-  rm Results/query_1.csv
-  rm Results/query_2.csv
-fi
-
 if [[ "$cmd" == "save" ]]; then
   additional_arg=${2:-hdfs}
   # set default location to hdfs

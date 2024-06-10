@@ -17,7 +17,7 @@ This script will:
 - launch the Docker containers
 - setup HDFS (format namenode and start the distributed filesystem)
 - run NiFi setup script
-- setup Spark (starts master and two workers)
+- setup Spark (starts master and three workers)
 
 ### Launching Application
 

@@ -1,4 +1,4 @@
-data
+dataset.csv
 .venv
 *.crc
 .env

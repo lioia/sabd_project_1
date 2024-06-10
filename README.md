@@ -73,3 +73,46 @@ number of failures suffered by the hard disks of that specific model.
 Calculate a second ranking of the 10 vaults that recorded the most failures.
 For each vault, report the number of failures and the list (without repetitions)
 of hark disk models subject to at least one failure.
+
+## Folder Structure
+
+```plaintext
+├── data                        folder containing the dataset
+│   └── dataset.csv                 the dataset
+├── grafana                     folder for Grafana configuration
+│   ├── dashboards                  Grafana Dashboards
+│   │   ├── query_1.json
+│   │   ├── query_2_1.json
+│   │   └── query_2_2.json
+│   ├── dashboard.yaml              Provisioning for the Dashboards
+│   └── datasource.yaml             Provisioning for the Mongo connection
+├── nifi                        folder for NiFi automation
+│   ├── hdfs                        HDFS configuration
+│   │   ├── core-site.xml
+│   │   └── hdfs-site.xml
+│   ├── main.py                     Helper Script to automatically deploy NiFi
+│   ├── nifi_api.py                 REST API helper
+│   └── nifi_template.xml           NiFi Template
+├── Report                      folder for the Report
+│   └── Report.pdf
+├── Results                     folder for the Results
+│   ├── query_1.csv
+│   └── query_2.csv
+├── scripts                     folder containing the execution scripts
+│   ├── clean.sh                    Clean-up environment
+│   ├── run.sh                      Run Spark Application
+│   └── setup.sh                    Setup environment
+├── src                         folder containing the actual application
+│   ├── main.py                     Application Entrypoint
+│   └── spark                       Spark Specific Code
+│       ├── analysis.py                 Analysis Command
+│       ├── df.py                       DataFrame implementation
+│       ├── __init__.py
+│       ├── rdd.py                      RDD implementation
+│       ├── spark.py                    Spark Entrypoint
+│       └── utils.py                    Helper functions
+├── compose.yaml                Docker Compose configuration
+├── example.env                 Environment Variables setup
+├── README.md                   This file
+└── requirements.txt            Python packages for Code Editor setup and NiFi script
+```

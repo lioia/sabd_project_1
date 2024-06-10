@@ -2,7 +2,8 @@
 
 ## Deployment
 
-Download dataset into `data/dataset.csv`
+Download dataset into `data/dataset.csv` and configure `.env` based on
+`example.env`
 
 ### Environment Setup
 
